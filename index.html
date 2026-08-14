@@ -10,6 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
 
 <style>
   :root {
@@ -256,6 +257,22 @@
   .file-item.current { background: rgba(21,101,192,0.12); font-weight: 600; }
   .file-item .f-icon { font-size: 15px; flex-shrink: 0; }
   .file-item .f-name { flex: 1; word-break: break-all; }
+
+  .editor-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #editorTextarea {
+    flex: 1; width: 100%; border: none; resize: none; outline: none;
+    padding: 14px; font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 13px; line-height: 1.5; background: var(--bg); color: var(--text);
+    white-space: pre; overflow: auto; border-bottom: 2px solid var(--border);
+  }
+  #editorPreview { flex: 1; width: 100%; border: none; background: #fff; }
+  .editor-body.code-only #editorPreview { display: none; }
+  .editor-body.code-only #editorTextarea { border-bottom: none; }
+  .editor-body.preview-only #editorTextarea { display: none; }
+
+  .history-item { padding: 12px; }
+  .history-time { font-weight: 600; font-size: 13.5px; color: var(--text); }
+  .history-preview { font-size: 12px; color: var(--muted); margin-top: 3px; }
 </style>
 </head>
 <body>
@@ -282,6 +299,7 @@
         <div class="btn-row">
           <button class="primary-btn" id="btnOpenMain">Choose HTML File</button>
           <button class="secondary-btn" id="btnOpenFolderMain">Choose Folder</button>
+          <button class="secondary-btn" id="btnNewFileMain">New File</button>
         </div>
       </div>
 
@@ -317,11 +335,13 @@
 <div class="sheet-overlay" id="moreOverlay">
   <div class="sheet">
     <div class="sheet-handle"></div>
+    <div class="menu-row" id="mNewFile"><span class="m-icon">&#10133;</span><span class="m-label">New File</span></div>
     <div class="menu-row" id="mOpenFile"><span class="m-icon">&#128196;</span><span class="m-label">Open HTML File</span></div>
     <div class="menu-row" id="mOpenFolder"><span class="m-icon">&#128193;</span><span class="m-label">Open Folder</span></div>
     <div class="menu-row" id="mReload"><span class="m-icon">&#8635;</span><span class="m-label">Reload</span></div>
     <div class="menu-row" id="mAutoReload"><span class="m-icon">&#8635;&#8635;</span><span class="m-label">Auto-reload on Change</span><span class="m-value" id="mAutoReloadValue">Off</span></div>
     <div class="menu-row hidden-row" id="mFiles"><span class="m-icon">&#128194;</span><span class="m-label">Project Files</span></div>
+    <div class="menu-row hidden-row" id="mExportZip"><span class="m-icon">&#128230;</span><span class="m-label">Export Folder as ZIP</span></div>
     <div class="menu-divider"></div>
     <div class="menu-row" id="mDarkMode"><span class="m-icon">&#127769;</span><span class="m-label">Night Mode</span><span class="m-value" id="mDarkModeValue">Off</span></div>
     <div class="zoom-row">
@@ -345,6 +365,7 @@
     <div class="menu-row" id="mScreenshot"><span class="m-icon">&#128248;</span><span class="m-label">Screenshot</span></div>
     <div class="menu-row" id="mCopyPath"><span class="m-icon">&#128279;</span><span class="m-label">Copy Page Path</span></div>
     <div class="menu-row" id="mShare"><span class="m-icon">&#128228;</span><span class="m-label">Share</span></div>
+    <div class="menu-row" id="mQR"><span class="m-icon">&#128241;</span><span class="m-label">QR Code Share</span></div>
     <div class="menu-divider"></div>
     <div class="menu-row" id="mConsole"><span class="m-icon">&#128187;</span><span class="m-label">Console</span><span class="m-value" id="mConsoleValue">Empty</span></div>
   </div>
@@ -354,6 +375,8 @@
   <div class="full-header">
     <span class="full-title">View / Edit Source</span>
     <div class="full-actions">
+      <button class="text-btn" id="sourceSnippets">&#129513;</button>
+      <button class="text-btn" id="sourceHistory">&#128337;</button>
       <button class="text-btn" id="sourceApply">Apply</button>
       <button class="text-btn" id="sourceSave">Save</button>
       <button class="icon-btn" id="sourceClose">&times;</button>
@@ -371,6 +394,54 @@
     </div>
   </div>
   <div class="console-list" id="consoleList"></div>
+</div>
+
+<div class="full-overlay" id="editorOverlay">
+  <div class="full-header">
+    <span class="full-title">New File</span>
+    <div class="full-actions">
+      <button class="text-btn" id="editorLayoutToggle">Split</button>
+      <button class="text-btn" id="editorSnippets">&#129513;</button>
+      <button class="text-btn" id="editorHistory">&#128337;</button>
+      <button class="text-btn" id="editorSave">Save</button>
+      <button class="icon-btn" id="editorClose">&times;</button>
+    </div>
+  </div>
+  <div id="editorBody" class="editor-body split">
+    <textarea id="editorTextarea" spellcheck="false"></textarea>
+    <iframe id="editorPreview" title="Live preview" sandbox="allow-scripts allow-same-origin"></iframe>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="snippetsOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Insert Snippet</h2>
+    <div id="snippetsList"></div>
+  </div>
+</div>
+
+<div class="full-overlay" id="historyOverlay">
+  <div class="full-header">
+    <span class="full-title">Version History</span>
+    <div class="full-actions">
+      <button class="icon-btn" id="historyClose">&times;</button>
+    </div>
+  </div>
+  <div id="historyList" style="flex:1; overflow-y:auto;"></div>
+</div>
+
+<div class="full-overlay" id="qrOverlay">
+  <div class="full-header">
+    <span class="full-title">QR Code</span>
+    <div class="full-actions">
+      <button class="icon-btn" id="qrClose">&times;</button>
+    </div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; gap:16px;">
+    <div id="qrContainer" style="background:#fff; padding:16px; border-radius:12px;"></div>
+    <p style="text-align:center; font-size:13px; color:var(--muted); max-width:300px; margin:0;">Scan with a camera app. Works best for small, self-contained pages — some QR scanner apps may not auto-open the result, since it's a local link rather than a website.</p>
+  </div>
 </div>
 
 <div class="full-overlay" id="filesOverlay">
@@ -404,9 +475,18 @@
   const sourceOverlay = document.getElementById('sourceOverlay');
   const consoleOverlay = document.getElementById('consoleOverlay');
   const filesOverlay = document.getElementById('filesOverlay');
+  const qrOverlay = document.getElementById('qrOverlay');
+  const editorOverlay = document.getElementById('editorOverlay');
+  const snippetsOverlay = document.getElementById('snippetsOverlay');
+  const historyOverlay = document.getElementById('historyOverlay');
   const sourceTextarea = document.getElementById('sourceTextarea');
   const consoleList = document.getElementById('consoleList');
   const filesList = document.getElementById('filesList');
+  const editorTextarea = document.getElementById('editorTextarea');
+  const editorPreview = document.getElementById('editorPreview');
+  const editorBody = document.getElementById('editorBody');
+  const snippetsList = document.getElementById('snippetsList');
+  const historyList = document.getElementById('historyList');
   const findBar = document.getElementById('findBar');
   const findInput = document.getElementById('findInput');
   const findCount = document.getElementById('findCount');
@@ -422,7 +502,7 @@
   function closeSheet(el) { el.classList.remove('show'); }
   function openFullOverlay(el) { el.classList.add('show'); }
   function closeFullOverlay(el) { el.classList.remove('show'); }
-  [entryPickerOverlay, moreOverlay].forEach(ov => {
+  [entryPickerOverlay, moreOverlay, snippetsOverlay].forEach(ov => {
     ov.addEventListener('click', (e) => { if (e.target === ov) closeSheet(ov); });
   });
 
@@ -887,12 +967,14 @@
         if (currentFolderEntryPath) fileMap.set(currentFolderEntryPath, freshFile);
         lastKnownModified = freshFile.lastModified;
         showToast('Saved to the original file');
+        saveVersionSnapshot(currentFolderEntryPath || filename, edited);
         return;
       } catch (e) {
         showToast('Could not save directly \u2014 downloading a copy instead');
       }
     }
     downloadTextAsFile(edited, filename, 'text/html');
+    saveVersionSnapshot(currentFolderEntryPath || filename, edited);
   });
 
   document.getElementById('mFiles').addEventListener('click', () => {
@@ -930,18 +1012,340 @@
     });
   }
 
+  // ================= Export folder as ZIP (no external library; store/no-compression) =================
+  function crc32(buf) {
+    if (!crc32.table) {
+      const table = [];
+      for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        table[n] = c >>> 0;
+      }
+      crc32.table = table;
+    }
+    let crc = 0xFFFFFFFF;
+    for (let i = 0; i < buf.length; i++) crc = (crc >>> 8) ^ crc32.table[(crc ^ buf[i]) & 0xFF];
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+  function buildZip(entries) {
+    const localParts = [];
+    const centralParts = [];
+    let offset = 0;
+    const enc = new TextEncoder();
+    entries.forEach(({ path, data }) => {
+      const nameBytes = enc.encode(path);
+      const crc = crc32(data);
+      const size = data.length;
+
+      const local = new Uint8Array(30 + nameBytes.length);
+      const ldv = new DataView(local.buffer);
+      ldv.setUint32(0, 0x04034b50, true);
+      ldv.setUint16(4, 20, true);
+      ldv.setUint16(6, 0, true);
+      ldv.setUint16(8, 0, true);
+      ldv.setUint16(10, 0, true);
+      ldv.setUint16(12, 0x21, true);
+      ldv.setUint32(14, crc, true);
+      ldv.setUint32(18, size, true);
+      ldv.setUint32(22, size, true);
+      ldv.setUint16(26, nameBytes.length, true);
+      ldv.setUint16(28, 0, true);
+      local.set(nameBytes, 30);
+      localParts.push(local, data);
+
+      const central = new Uint8Array(46 + nameBytes.length);
+      const cdv = new DataView(central.buffer);
+      cdv.setUint32(0, 0x02014b50, true);
+      cdv.setUint16(4, 20, true);
+      cdv.setUint16(6, 20, true);
+      cdv.setUint16(8, 0, true);
+      cdv.setUint16(10, 0, true);
+      cdv.setUint16(12, 0, true);
+      cdv.setUint16(14, 0x21, true);
+      cdv.setUint32(16, crc, true);
+      cdv.setUint32(20, size, true);
+      cdv.setUint32(24, size, true);
+      cdv.setUint16(28, nameBytes.length, true);
+      cdv.setUint16(30, 0, true);
+      cdv.setUint16(32, 0, true);
+      cdv.setUint16(34, 0, true);
+      cdv.setUint16(36, 0, true);
+      cdv.setUint32(38, 0, true);
+      cdv.setUint32(42, offset, true);
+      central.set(nameBytes, 46);
+      centralParts.push(central);
+
+      offset += local.length + data.length;
+    });
+
+    const centralSize = centralParts.reduce((s, p) => s + p.length, 0);
+    const centralOffset = offset;
+    const end = new Uint8Array(22);
+    const edv = new DataView(end.buffer);
+    edv.setUint32(0, 0x06054b50, true);
+    edv.setUint16(4, 0, true);
+    edv.setUint16(6, 0, true);
+    edv.setUint16(8, entries.length, true);
+    edv.setUint16(10, entries.length, true);
+    edv.setUint32(12, centralSize, true);
+    edv.setUint32(16, centralOffset, true);
+    edv.setUint16(20, 0, true);
+
+    return new Blob([...localParts, ...centralParts, end], { type: 'application/zip' });
+  }
+  document.getElementById('mExportZip').addEventListener('click', async () => {
+    closeSheet(moreOverlay);
+    if (!fileMap.size) { showToast('Open a folder first'); return; }
+    showToast('Building ZIP…');
+    try {
+      const entries = [];
+      for (const [path, file] of fileMap.entries()) {
+        entries.push({ path, data: new Uint8Array(await file.arrayBuffer()) });
+      }
+      const blob = buildZip(entries);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = (currentFolderName || 'project') + '.zip';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      showToast('ZIP downloaded');
+    } catch (e) {
+      showToast('Could not build ZIP');
+    }
+  });
+
+  // ================= QR code share =================
+  const QR_MAX_CHARS = 1800;
+  document.getElementById('mQR').addEventListener('click', async () => {
+    closeSheet(moreOverlay);
+    let text = null;
+    if (currentFolderEntryPath) {
+      const f = fileMap.get(currentFolderEntryPath);
+      text = await f.text();
+    } else if (currentSingleFileText !== null) {
+      text = currentSingleFileText;
+    }
+    if (text === null) { showToast('No file is currently open'); return; }
+    if (typeof QRCode === 'undefined') {
+      showToast('QR needs internet the first time it loads — try again once online');
+      return;
+    }
+    const dataUri = 'data:text/html;base64,' + btoa(unescape(encodeURIComponent(text)));
+    if (dataUri.length > QR_MAX_CHARS) {
+      showToast('This page is too large for a reliable QR code — try Share instead');
+      return;
+    }
+    const container = document.getElementById('qrContainer');
+    container.innerHTML = '';
+    new QRCode(container, { text: dataUri, width: 220, height: 220 });
+    openFullOverlay(qrOverlay);
+  });
+  document.getElementById('qrClose').addEventListener('click', () => closeFullOverlay(qrOverlay));
+
   function idbOpen() {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open('htmlViewerDB', 1);
+      const req = indexedDB.open('htmlViewerDB', 2);
       req.onupgradeneeded = () => {
-        if (!req.result.objectStoreNames.contains('recents')) {
-          req.result.createObjectStore('recents', { keyPath: 'id', autoIncrement: true });
+        const db = req.result;
+        if (!db.objectStoreNames.contains('recents')) {
+          db.createObjectStore('recents', { keyPath: 'id', autoIncrement: true });
+        }
+        if (!db.objectStoreNames.contains('versions')) {
+          db.createObjectStore('versions', { keyPath: 'id', autoIncrement: true });
         }
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
   }
+
+  // ================= Version history =================
+  async function idbGetAllVersions() {
+    try {
+      const db = await idbOpen();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction('versions', 'readonly');
+        const req = tx.objectStore('versions').getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) { return []; }
+  }
+  async function saveVersionSnapshot(fileKey, content) {
+    if (!fileKey) return;
+    try {
+      const db = await idbOpen();
+      const tx = db.transaction('versions', 'readwrite');
+      tx.objectStore('versions').add({ fileKey, content, ts: Date.now() });
+      await new Promise((res) => { tx.oncomplete = res; tx.onerror = res; });
+      const all = await idbGetAllVersions();
+      const forKey = all.filter((v) => v.fileKey === fileKey).sort((a, b) => b.ts - a.ts);
+      if (forKey.length > 20) {
+        const db2 = await idbOpen();
+        const tx2 = db2.transaction('versions', 'readwrite');
+        const store2 = tx2.objectStore('versions');
+        forKey.slice(20).forEach((v) => store2.delete(v.id));
+      }
+    } catch (e) { /* non-critical */ }
+  }
+  let historyTarget = null;
+  let historyOnChange = null;
+  async function openVersionHistory(fileKey, targetTextarea, onChange) {
+    if (!fileKey) { showToast('No file is currently open'); return; }
+    historyTarget = targetTextarea;
+    historyOnChange = onChange;
+    const all = await idbGetAllVersions();
+    const versions = all.filter((v) => v.fileKey === fileKey).sort((a, b) => b.ts - a.ts);
+    historyList.innerHTML = '';
+    if (!versions.length) {
+      historyList.innerHTML = '<div class="console-empty">No saved versions yet for this file. Versions are saved each time you press Save.</div>';
+    } else {
+      versions.forEach((v) => {
+        const preview = v.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 70);
+        const div = document.createElement('div');
+        div.className = 'file-item history-item';
+        div.innerHTML =
+          '<span class="f-icon">&#128337;</span>' +
+          '<div class="f-name"><div class="history-time"></div><div class="history-preview"></div></div>';
+        div.querySelector('.history-time').textContent = new Date(v.ts).toLocaleString();
+        div.querySelector('.history-preview').textContent = preview || '(empty)';
+        div.addEventListener('click', () => {
+          if (historyTarget) {
+            historyTarget.value = v.content;
+            if (historyOnChange) historyOnChange();
+            else historyTarget.dispatchEvent(new Event('input'));
+          }
+          closeFullOverlay(historyOverlay);
+          showToast('Version loaded — press Save to keep it');
+        });
+        historyList.appendChild(div);
+      });
+    }
+    openFullOverlay(historyOverlay);
+  }
+  document.getElementById('historyClose').addEventListener('click', () => closeFullOverlay(historyOverlay));
+  document.getElementById('sourceHistory').addEventListener('click', () => {
+    const fileKey = currentFolderEntryPath || currentSingleFileName;
+    openVersionHistory(fileKey, sourceTextarea, null);
+  });
+
+  // ================= Snippets library =================
+  const SNIPPETS = [
+    { label: 'Heading', code: '<h1>Heading</h1>\n' },
+    { label: 'Paragraph', code: '<p>Paragraph text</p>\n' },
+    { label: 'Image', code: '<img src="image.jpg" alt="description">\n' },
+    { label: 'Link', code: '<a href="https://example.com">Link text</a>\n' },
+    { label: 'Button', code: '<button onclick="">Click me</button>\n' },
+    { label: 'Div container', code: '<div>\n  \n</div>\n' },
+    { label: 'Flex container', code: '<div style="display:flex; gap:10px;">\n  \n</div>\n' },
+    { label: 'Unordered list', code: '<ul>\n  <li>Item 1</li>\n  <li>Item 2</li>\n</ul>\n' },
+    { label: 'Table', code: '<table>\n  <tr><th>Header</th></tr>\n  <tr><td>Data</td></tr>\n</table>\n' },
+    { label: 'Form', code: '<form>\n  <input type="text" placeholder="Name">\n  <button type="submit">Submit</button>\n</form>\n' },
+    { label: 'Style block', code: '<style>\n  \n</style>\n' },
+    { label: 'Script block', code: '<script>\n  \n<\/script>\n' },
+    { label: 'CSS reset', code: '* { margin:0; padding:0; box-sizing:border-box; }\n' },
+    { label: 'Google Font link', code: '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto&display=swap">\n' }
+  ];
+  let snippetTarget = null;
+  let snippetOnChange = null;
+  function openSnippets(targetTextarea, onChange) {
+    snippetTarget = targetTextarea;
+    snippetOnChange = onChange;
+    snippetsList.innerHTML = '';
+    SNIPPETS.forEach((sn) => {
+      const div = document.createElement('div');
+      div.className = 'entry-item';
+      div.textContent = sn.label;
+      div.addEventListener('click', () => {
+        insertSnippet(sn.code);
+        closeSheet(snippetsOverlay);
+      });
+      snippetsList.appendChild(div);
+    });
+    openSheet(snippetsOverlay);
+  }
+  function insertSnippet(code) {
+    if (!snippetTarget) return;
+    const ta = snippetTarget;
+    const start = ta.selectionStart, end = ta.selectionEnd;
+    ta.value = ta.value.slice(0, start) + code + ta.value.slice(end);
+    const newPos = start + code.length;
+    ta.focus();
+    ta.setSelectionRange(newPos, newPos);
+    if (snippetOnChange) snippetOnChange();
+    else ta.dispatchEvent(new Event('input'));
+  }
+  document.getElementById('sourceSnippets').addEventListener('click', () => openSnippets(sourceTextarea, null));
+
+  // ================= New File editor (with live split preview) =================
+  const BOILERPLATE_HTML = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<title>New Page</title>\n<style>\n  body { font-family: sans-serif; padding: 20px; }\n</style>\n</head>\n<body>\n  <h1>Hello!</h1>\n  <p>Start editing to see your changes.</p>\n</body>\n</html>\n';
+  let newFileHandle = null;
+  let newFileName = null;
+  let editorLayoutMode = 'split';
+  let editorDebounceTimer = null;
+
+  function setEditorLayout(mode) {
+    editorLayoutMode = mode;
+    editorBody.className = 'editor-body ' + mode;
+    const labels = { split: 'Split', 'code-only': 'Code', 'preview-only': 'Preview' };
+    document.getElementById('editorLayoutToggle').textContent = labels[mode];
+  }
+  document.getElementById('editorLayoutToggle').addEventListener('click', () => {
+    const order = ['split', 'code-only', 'preview-only'];
+    setEditorLayout(order[(order.indexOf(editorLayoutMode) + 1) % order.length]);
+  });
+
+  function updateEditorPreview() {
+    const doc = new DOMParser().parseFromString(editorTextarea.value, 'text/html');
+    editorPreview.srcdoc = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+  }
+  editorTextarea.addEventListener('input', () => {
+    clearTimeout(editorDebounceTimer);
+    editorDebounceTimer = setTimeout(updateEditorPreview, 300);
+  });
+
+  function openNewFileEditor() {
+    newFileHandle = null;
+    newFileName = null;
+    editorTextarea.value = BOILERPLATE_HTML;
+    setEditorLayout('split');
+    updateEditorPreview();
+    openFullOverlay(editorOverlay);
+  }
+  document.getElementById('btnNewFileMain').addEventListener('click', openNewFileEditor);
+  document.getElementById('mNewFile').addEventListener('click', () => { closeSheet(moreOverlay); openNewFileEditor(); });
+  document.getElementById('editorClose').addEventListener('click', () => closeFullOverlay(editorOverlay));
+  document.getElementById('editorSnippets').addEventListener('click', () => openSnippets(editorTextarea, updateEditorPreview));
+  document.getElementById('editorHistory').addEventListener('click', () => {
+    openVersionHistory(newFileName || 'untitled.html', editorTextarea, updateEditorPreview);
+  });
+
+  document.getElementById('editorSave').addEventListener('click', async () => {
+    const content = editorTextarea.value;
+    if (hasFSA && window.showSaveFilePicker) {
+      try {
+        const handle = newFileHandle || await window.showSaveFilePicker({
+          suggestedName: newFileName || 'untitled.html',
+          types: [{ description: 'HTML', accept: { 'text/html': ['.html'] } }]
+        });
+        newFileHandle = handle;
+        newFileName = handle.name;
+        const writable = await handle.createWritable();
+        await writable.write(content);
+        await writable.close();
+        showToast('Saved: ' + handle.name);
+        saveVersionSnapshot(newFileName, content);
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+        showToast('Could not save directly — downloading instead');
+      }
+    }
+    const name = prompt('File name', newFileName || 'untitled.html') || 'untitled.html';
+    newFileName = name;
+    downloadTextAsFile(content, name, 'text/html');
+    saveVersionSnapshot(name, content);
+  });
   async function idbGetAllRecents() {
     try {
       const db = await idbOpen();
@@ -1092,6 +1496,7 @@
       showViewer(file.name);
       btnBack.style.display = 'none';
       document.getElementById('mFiles').classList.add('hidden-row');
+      document.getElementById('mExportZip').classList.add('hidden-row');
       addRecent({ type: 'file', name: file.name, handle: handle || null });
       resetConsoleLogs();
       lastKnownModified = file.lastModified;
@@ -1160,6 +1565,7 @@
     currentFolderName = null;
     btnBack.style.display = 'none';
     document.getElementById('mFiles').classList.add('hidden-row');
+    document.getElementById('mExportZip').classList.add('hidden-row');
   }
 
   async function buildFileMapFromDirHandle(dirHandle) {
@@ -1211,6 +1617,7 @@
       return;
     }
     document.getElementById('mFiles').classList.remove('hidden-row');
+    document.getElementById('mExportZip').classList.remove('hidden-row');
     const rootIndex = htmlPaths.find(p => /^index\.html?$/i.test(p));
     if (rootIndex) {
       renderEntry(rootIndex, { pushHistory: true, clearHistory: true });
