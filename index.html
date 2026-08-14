@@ -128,7 +128,7 @@
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
     background: #333; color: #fff; padding: 10px 18px; border-radius: 20px;
     font-size: 13px; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
-    z-index: 50; max-width: 85%; text-align: center;
+    z-index: 70; max-width: 85%; text-align: center;
   }
   #toast.show { opacity: 1; }
 
@@ -141,7 +141,7 @@
   }
   .sheet-overlay.show { display: flex; }
   .sheet {
-    background: var(--surface); width: 100%; max-height: 75vh;
+    background: var(--surface); width: 100%; max-height: 80vh;
     border-radius: 16px 16px 0 0;
     padding: 10px 16px calc(14px + env(safe-area-inset-bottom));
     overflow-y: auto;
@@ -163,9 +163,9 @@
     font-size: 14.5px; color: var(--text);
   }
   .menu-row:active { background: rgba(21,101,192,0.08); }
-  .menu-row .m-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+  .menu-row .m-icon { font-size: 16px; width: 24px; text-align: center; flex-shrink: 0; font-family: monospace; }
   .menu-row .m-label { flex: 1; }
-  .menu-row .m-value { font-size: 12.5px; color: var(--muted); }
+  .menu-row .m-value { font-size: 12.5px; color: var(--muted); flex-shrink: 0; }
   .menu-row.disabled { opacity: 0.4; pointer-events: none; }
   .menu-divider { height: 1px; background: var(--border); margin: 6px 0; }
 
@@ -181,6 +181,50 @@
   }
   .zoom-btn:active { background: rgba(21,101,192,0.1); }
   .zoom-level { font-size: 13.5px; color: var(--text); min-width: 42px; text-align: center; }
+
+  /* Full-screen overlays: source editor & console */
+  .full-overlay {
+    position: fixed; inset: 0; background: var(--surface);
+    display: none; flex-direction: column; z-index: 60;
+  }
+  .full-overlay.show { display: flex; }
+  .full-header {
+    background: var(--primary); color: #fff;
+    padding: 12px 8px 12px 16px;
+    padding-top: calc(12px + env(safe-area-inset-top));
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    flex-shrink: 0;
+  }
+  .full-title { font-size: 15px; font-weight: 600; }
+  .full-actions { display: flex; align-items: center; gap: 4px; }
+  .text-btn {
+    background: rgba(255,255,255,0.18); border: none; color: #fff;
+    font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 16px; cursor: pointer;
+  }
+  .text-btn:active { background: rgba(255,255,255,0.32); }
+
+  #sourceTextarea {
+    flex: 1; width: 100%; border: none; resize: none; outline: none;
+    padding: 14px; font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 13px; line-height: 1.5; background: var(--bg); color: var(--text);
+    white-space: pre; overflow: auto;
+  }
+
+  .console-list { flex: 1; overflow-y: auto; padding: 6px 12px; }
+  .console-entry {
+    display: flex; gap: 8px; align-items: flex-start;
+    padding: 9px 4px; border-bottom: 1px solid var(--border);
+    font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 12.5px;
+  }
+  .console-badge {
+    flex-shrink: 0; font-size: 10px; font-weight: 700; letter-spacing: 0.02em;
+    padding: 2px 6px; border-radius: 4px; background: #607D8B; color: #fff; margin-top: 1px;
+  }
+  .console-entry.level-error .console-badge { background: #D32F2F; }
+  .console-entry.level-warn .console-badge { background: #F9A825; }
+  .console-msg { flex: 1; word-break: break-word; color: var(--text); }
+  .console-time { flex-shrink: 0; font-size: 10.5px; color: var(--muted); }
+  .console-empty { padding: 30px 16px; text-align: center; color: var(--muted); font-size: 13.5px; font-family: inherit; }
 </style>
 </head>
 <body>
@@ -238,6 +282,7 @@
     <div class="menu-row" id="mOpenFile"><span class="m-icon">&#128196;</span><span class="m-label">Open HTML File</span></div>
     <div class="menu-row" id="mOpenFolder"><span class="m-icon">&#128193;</span><span class="m-label">Open Folder</span></div>
     <div class="menu-row" id="mReload"><span class="m-icon">&#8635;</span><span class="m-label">Reload</span></div>
+    <div class="menu-row" id="mAutoReload"><span class="m-icon">&#8635;&#8635;</span><span class="m-label">Auto-reload on Change</span><span class="m-value" id="mAutoReloadValue">Off</span></div>
     <div class="menu-divider"></div>
     <div class="menu-row" id="mDarkMode"><span class="m-icon">&#127769;</span><span class="m-label">Night Mode</span><span class="m-value" id="mDarkModeValue">Off</span></div>
     <div class="zoom-row">
@@ -248,9 +293,37 @@
       <button class="zoom-btn" id="zoomIn">&#43;</button>
     </div>
     <div class="menu-divider"></div>
+    <div class="menu-row" id="mViewSource"><span class="m-icon">&lt;/&gt;</span><span class="m-label">View / Edit Source</span></div>
     <div class="menu-row" id="mPrint"><span class="m-icon">&#128424;</span><span class="m-label">Print / Save as PDF</span></div>
     <div class="menu-row" id="mExport"><span class="m-icon">&#128190;</span><span class="m-label">Save as Single File</span></div>
+    <div class="menu-divider"></div>
+    <div class="menu-row" id="mConsole"><span class="m-icon">&#128187;</span><span class="m-label">Console</span><span class="m-value" id="mConsoleValue">Empty</span></div>
   </div>
+</div>
+
+<!-- View / Edit Source -->
+<div class="full-overlay" id="sourceOverlay">
+  <div class="full-header">
+    <span class="full-title">View / Edit Source</span>
+    <div class="full-actions">
+      <button class="text-btn" id="sourceApply">Apply</button>
+      <button class="text-btn" id="sourceSave">Save</button>
+      <button class="icon-btn" id="sourceClose">&times;</button>
+    </div>
+  </div>
+  <textarea id="sourceTextarea" spellcheck="false"></textarea>
+</div>
+
+<!-- Console -->
+<div class="full-overlay" id="consoleOverlay">
+  <div class="full-header">
+    <span class="full-title">Console</span>
+    <div class="full-actions">
+      <button class="text-btn" id="consoleClear">Clear</button>
+      <button class="icon-btn" id="consoleClose">&times;</button>
+    </div>
+  </div>
+  <div class="console-list" id="consoleList"></div>
 </div>
 
 <div id="toast"></div>
@@ -270,6 +343,10 @@
   const entryPickerOverlay = document.getElementById('entryPickerOverlay');
   const entryPickerList = document.getElementById('entryPickerList');
   const moreOverlay = document.getElementById('moreOverlay');
+  const sourceOverlay = document.getElementById('sourceOverlay');
+  const consoleOverlay = document.getElementById('consoleOverlay');
+  const sourceTextarea = document.getElementById('sourceTextarea');
+  const consoleList = document.getElementById('consoleList');
 
   const hasFSA = 'showOpenFilePicker' in window && 'showDirectoryPicker' in window;
 
@@ -281,6 +358,8 @@
   }
   function openSheet(el) { el.classList.add('show'); }
   function closeSheet(el) { el.classList.remove('show'); }
+  function openFullOverlay(el) { el.classList.add('show'); }
+  function closeFullOverlay(el) { el.classList.remove('show'); }
   [entryPickerOverlay, moreOverlay].forEach(ov => {
     ov.addEventListener('click', (e) => { if (e.target === ov) closeSheet(ov); });
   });
@@ -293,6 +372,7 @@
     applyZoom();
   }
   function goHome() {
+    stopWatcher();
     viewerFrame.style.display = 'none';
     viewerFrame.removeAttribute('src');
     viewerFrame.removeAttribute('srcdoc');
@@ -300,6 +380,8 @@
     fileNameEl.textContent = '';
     btnHome.style.display = 'none';
     btnBack.style.display = 'none';
+    currentRawText = null;
+    resetConsoleLogs();
     loadRecents();
   }
   btnHome.addEventListener('click', goHome);
@@ -326,6 +408,87 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
   }
+
+  // ================= Console-capture script injected into every rendered page =================
+  function buildConsoleScriptEl(doc) {
+    const s = doc.createElement('script');
+    s.textContent = `(function(){
+      function send(level, args){
+        try {
+          var msg = Array.prototype.map.call(args, function(a){
+            try { return typeof a === 'object' ? JSON.stringify(a) : String(a); } catch(e){ return String(a); }
+          }).join(' ');
+          window.parent.postMessage({ type: 'html-viewer-log', level: level, message: msg }, '*');
+        } catch(e){}
+      }
+      ['log','warn','error','info'].forEach(function(level){
+        var orig = console[level] ? console[level].bind(console) : function(){};
+        console[level] = function(){ send(level, arguments); orig.apply(console, arguments); };
+      });
+      window.addEventListener('error', function(e){
+        send('error', [(e.message||'Script error') + ' (' + (e.filename||'') + ':' + (e.lineno||0) + ')']);
+      });
+      window.addEventListener('unhandledrejection', function(e){
+        var r = e.reason;
+        send('error', ['Unhandled promise rejection: ' + (r && r.message ? r.message : String(r))]);
+      });
+    })();`;
+    return s;
+  }
+  function injectHeadScript(doc, scriptEl) {
+    const head = doc.head || doc.documentElement;
+    head.insertBefore(scriptEl, head.firstChild);
+  }
+
+  // ================= Console panel =================
+  let consoleLogs = [];
+  let newErrorCount = 0;
+  function resetConsoleLogs() {
+    consoleLogs = [];
+    newErrorCount = 0;
+    updateConsoleBadge();
+    renderConsoleList();
+  }
+  function addConsoleLog(level, message) {
+    consoleLogs.push({ level, message, ts: Date.now() });
+    if (consoleLogs.length > 300) consoleLogs.shift();
+    if (level === 'error') newErrorCount++;
+    updateConsoleBadge();
+    if (consoleOverlay.classList.contains('show')) renderConsoleList();
+  }
+  function updateConsoleBadge() {
+    const el = document.getElementById('mConsoleValue');
+    if (newErrorCount > 0) el.textContent = newErrorCount + (newErrorCount === 1 ? ' error' : ' errors');
+    else el.textContent = consoleLogs.length ? 'OK' : 'Empty';
+  }
+  function renderConsoleList() {
+    consoleList.innerHTML = '';
+    if (!consoleLogs.length) {
+      consoleList.innerHTML = '<div class="console-empty">No console output yet.</div>';
+      return;
+    }
+    consoleLogs.forEach((entry) => {
+      const div = document.createElement('div');
+      div.className = 'console-entry level-' + entry.level;
+      div.innerHTML = '<span class="console-badge"></span><span class="console-msg"></span><span class="console-time"></span>';
+      div.querySelector('.console-badge').textContent = entry.level.toUpperCase();
+      div.querySelector('.console-msg').textContent = entry.message;
+      div.querySelector('.console-time').textContent = new Date(entry.ts).toLocaleTimeString();
+      consoleList.appendChild(div);
+    });
+    consoleList.scrollTop = consoleList.scrollHeight;
+  }
+  document.getElementById('mConsole').addEventListener('click', () => {
+    closeSheet(moreOverlay);
+    newErrorCount = 0;
+    updateConsoleBadge();
+    renderConsoleList();
+    openFullOverlay(consoleOverlay);
+  });
+  document.getElementById('consoleClose').addEventListener('click', () => closeFullOverlay(consoleOverlay));
+  document.getElementById('consoleClear').addEventListener('click', () => {
+    consoleLogs = []; newErrorCount = 0; updateConsoleBadge(); renderConsoleList();
+  });
 
   // ================= Night mode =================
   let nightMode = localStorage.getItem('hv-night') === '1';
@@ -374,6 +537,65 @@
   document.getElementById('mOpenFile').addEventListener('click', () => { closeSheet(moreOverlay); openFilePicker(); });
   document.getElementById('mOpenFolder').addEventListener('click', () => { closeSheet(moreOverlay); openFolderPicker(); });
   document.getElementById('mExport').addEventListener('click', () => { closeSheet(moreOverlay); exportCurrentAsSingleFile(); });
+
+  // ================= View / Edit Source =================
+  document.getElementById('mViewSource').addEventListener('click', () => {
+    closeSheet(moreOverlay);
+    if (currentRawText === null) { showToast('No file is currently open'); return; }
+    sourceTextarea.value = currentRawText;
+    openFullOverlay(sourceOverlay);
+  });
+  document.getElementById('sourceClose').addEventListener('click', () => closeFullOverlay(sourceOverlay));
+
+  document.getElementById('sourceApply').addEventListener('click', async () => {
+    const edited = sourceTextarea.value;
+    if (currentFolderEntryPath) {
+      await renderEntry(currentFolderEntryPath, { overrideText: edited });
+    } else if (currentSingleFileName !== null) {
+      currentSingleFileText = edited;
+      currentRawText = edited;
+      const doc = new DOMParser().parseFromString(edited, 'text/html');
+      injectHeadScript(doc, buildConsoleScriptEl(doc));
+      viewerFrame.removeAttribute('src');
+      viewerFrame.srcdoc = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+      resetConsoleLogs();
+    } else {
+      showToast('No file is currently open');
+      return;
+    }
+    showToast('Preview updated');
+  });
+
+  document.getElementById('sourceSave').addEventListener('click', async () => {
+    const edited = sourceTextarea.value;
+    let handle = null;
+    let filename = currentSingleFileName || 'page.html';
+
+    if (currentFolderEntryPath) {
+      handle = fileHandleMap.get(currentFolderEntryPath) || null;
+      filename = currentFolderEntryPath.split('/').pop();
+    } else if (currentSingleFileHandle) {
+      handle = currentSingleFileHandle;
+    }
+
+    if (handle) {
+      try {
+        const perm = await handle.requestPermission({ mode: 'readwrite' });
+        if (perm !== 'granted') throw new Error('permission denied');
+        const writable = await handle.createWritable();
+        await writable.write(edited);
+        await writable.close();
+        const freshFile = await handle.getFile();
+        if (currentFolderEntryPath) fileMap.set(currentFolderEntryPath, freshFile);
+        lastKnownModified = freshFile.lastModified;
+        showToast('Saved to the original file');
+        return;
+      } catch (e) {
+        showToast('Could not save directly — downloading a copy instead');
+      }
+    }
+    downloadTextAsFile(edited, filename, 'text/html');
+  });
 
   // ================= IndexedDB: recent files =================
   function idbOpen() {
@@ -468,23 +690,81 @@
     if (item.type === 'folder') openFolderPicker(); else openFilePicker();
   }
 
+  // ================= Auto-reload watcher =================
+  let autoReloadEnabled = localStorage.getItem('hv-autoreload') === '1';
+  document.getElementById('mAutoReloadValue').textContent = autoReloadEnabled ? 'On' : 'Off';
+  let watcherInterval = null;
+  let lastKnownModified = null;
+
+  function stopWatcher() {
+    if (watcherInterval) { clearInterval(watcherInterval); watcherInterval = null; }
+  }
+  function startWatcherIfEnabled() {
+    stopWatcher();
+    if (!autoReloadEnabled) return;
+    watcherInterval = setInterval(checkForChanges, 3000);
+  }
+  async function checkForChanges() {
+    try {
+      let handle = null;
+      if (currentFolderEntryPath && fileHandleMap.has(currentFolderEntryPath)) {
+        handle = fileHandleMap.get(currentFolderEntryPath);
+      } else if (currentSingleFileHandle) {
+        handle = currentSingleFileHandle;
+      }
+      if (!handle) return;
+      const file = await handle.getFile();
+      if (lastKnownModified !== null && file.lastModified !== lastKnownModified) {
+        lastKnownModified = file.lastModified;
+        if (currentFolderEntryPath) {
+          fileMap.set(currentFolderEntryPath, file);
+          await renderEntry(currentFolderEntryPath, {});
+        } else {
+          loadSingleFile(file, handle);
+        }
+        showToast('File changed — reloaded');
+      }
+    } catch (e) { /* ignore transient errors */ }
+  }
+  document.getElementById('mAutoReload').addEventListener('click', () => {
+    autoReloadEnabled = !autoReloadEnabled;
+    localStorage.setItem('hv-autoreload', autoReloadEnabled ? '1' : '0');
+    document.getElementById('mAutoReloadValue').textContent = autoReloadEnabled ? 'On' : 'Off';
+    if (autoReloadEnabled && !hasFSA) {
+      showToast('Auto-reload needs Chrome (File System Access API), and reopening the file via the picker.');
+    } else if (autoReloadEnabled && !(currentSingleFileHandle || (currentFolderEntryPath && fileHandleMap.has(currentFolderEntryPath)))) {
+      showToast('Reopen this file via the picker (not "Recent") for auto-reload to track it.');
+    }
+    startWatcherIfEnabled();
+  });
+
   // ================= Single-file mode =================
   let currentSingleFileText = null;
   let currentSingleFileName = null;
   let currentSingleFileHandle = null;
+  let currentRawText = null;
 
   function loadSingleFile(file, handle) {
     resetFolderSession();
     const reader = new FileReader();
     reader.onload = (evt) => {
-      currentSingleFileText = evt.target.result;
+      const rawText = evt.target.result;
+      currentSingleFileText = rawText;
+      currentRawText = rawText;
       currentSingleFileName = file.name;
       currentSingleFileHandle = handle || null;
+
+      const doc = new DOMParser().parseFromString(rawText, 'text/html');
+      injectHeadScript(doc, buildConsoleScriptEl(doc));
       viewerFrame.removeAttribute('src');
-      viewerFrame.srcdoc = currentSingleFileText;
+      viewerFrame.srcdoc = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+
       showViewer(file.name);
       btnBack.style.display = 'none';
       addRecent({ type: 'file', name: file.name, handle: handle || null });
+      resetConsoleLogs();
+      lastKnownModified = file.lastModified;
+      startWatcherIfEnabled();
     };
     reader.onerror = () => showToast('Could not read the file');
     reader.readAsText(file);
@@ -513,6 +793,7 @@
 
   // ================= Folder mode =================
   let fileMap = new Map();
+  let fileHandleMap = new Map();
   let assetUrlCache = new Map();
   let navHistory = [];
   let currentFolderEntryPath = null;
@@ -539,9 +820,11 @@
   document.getElementById('btnOpenFolderMain').addEventListener('click', openFolderPicker);
 
   function resetFolderSession() {
+    stopWatcher();
     for (const url of assetUrlCache.values()) URL.revokeObjectURL(url);
     assetUrlCache = new Map();
     fileMap = new Map();
+    fileHandleMap = new Map();
     navHistory = [];
     currentFolderEntryPath = null;
     currentFolderName = null;
@@ -550,11 +833,13 @@
 
   async function buildFileMapFromDirHandle(dirHandle) {
     const map = new Map();
+    fileHandleMap = new Map();
     async function walk(handle, prefix) {
       for await (const [name, entry] of handle.entries()) {
         const path = prefix ? prefix + '/' + name : name;
         if (entry.kind === 'file') {
           map.set(path, await entry.getFile());
+          fileHandleMap.set(path, entry);
         } else if (entry.kind === 'directory') {
           await walk(entry, path);
         }
@@ -672,10 +957,15 @@
   }
 
   async function renderEntry(path, opts = {}) {
-    const file = fileMap.get(path);
-    if (!file) { showToast('File not found'); return; }
     let text;
-    try { text = await file.text(); } catch (e) { showToast('Could not read the file'); return; }
+    if (opts.overrideText !== undefined) {
+      text = opts.overrideText;
+    } else {
+      const file = fileMap.get(path);
+      if (!file) { showToast('File not found'); return; }
+      try { text = await file.text(); } catch (e) { showToast('Could not read the file'); return; }
+    }
+    currentRawText = text;
 
     const doc = new DOMParser().parseFromString(text, 'text/html');
     const attrTargets = [
@@ -703,6 +993,9 @@
         a.setAttribute('href', 'javascript:void(0)');
       }
     }
+
+    injectHeadScript(doc, buildConsoleScriptEl(doc));
+
     const navScript = doc.createElement('script');
     navScript.textContent = `
       document.addEventListener('click', function(e){
@@ -722,10 +1015,21 @@
     viewerFrame.src = url;
     currentFolderEntryPath = path;
     showViewer((currentFolderName ? currentFolderName + ' / ' : '') + path);
+    resetConsoleLogs();
 
     if (opts.clearHistory) navHistory = [path];
     else if (opts.pushHistory) navHistory.push(path);
     btnBack.style.display = navHistory.length > 1 ? 'flex' : 'none';
+
+    if (opts.overrideText === undefined) {
+      const h = fileHandleMap.get(path);
+      if (h) {
+        try { const f = await h.getFile(); lastKnownModified = f.lastModified; } catch (e) { lastKnownModified = null; }
+      } else {
+        lastKnownModified = null;
+      }
+      startWatcherIfEnabled();
+    }
   }
 
   btnBack.addEventListener('click', () => {
@@ -735,8 +1039,11 @@
     }
   });
   window.addEventListener('message', (e) => {
-    if (e.data && e.data.type === 'html-viewer-nav' && fileMap.has(e.data.path)) {
+    if (!e.data) return;
+    if (e.data.type === 'html-viewer-nav' && fileMap.has(e.data.path)) {
       renderEntry(e.data.path, { pushHistory: true });
+    } else if (e.data.type === 'html-viewer-log') {
+      addConsoleLog(e.data.level, e.data.message);
     }
   });
 
@@ -746,7 +1053,10 @@
     } else if (currentSingleFileHandle) {
       currentSingleFileHandle.getFile().then((file) => loadSingleFile(file, currentSingleFileHandle));
     } else if (currentSingleFileText !== null) {
-      viewerFrame.srcdoc = currentSingleFileText;
+      const doc = new DOMParser().parseFromString(currentSingleFileText, 'text/html');
+      injectHeadScript(doc, buildConsoleScriptEl(doc));
+      viewerFrame.srcdoc = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+      resetConsoleLogs();
     } else {
       showToast('No file is currently open');
     }
