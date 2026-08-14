@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>HTML Viewer</title>
-<meta name="description" content="Open and view local HTML files on your device">
+<meta name="description" content="Open and view local HTML files or full folders on your device">
 <meta name="theme-color" content="#1565C0">
 
 <link rel="manifest" href="manifest.json">
@@ -16,8 +16,17 @@
     --primary: #1565C0;
     --primary-dark: #0D47A1;
     --bg: #F5F7FA;
+    --surface: #FFFFFF;
     --text: #333;
     --muted: #777;
+    --border: #E5E5E5;
+  }
+  html.dark {
+    --bg: #121212;
+    --surface: #1E1E1E;
+    --text: #EDEDED;
+    --muted: #AAAAAA;
+    --border: #333333;
   }
   * { box-sizing: border-box; }
   html, body {
@@ -28,12 +37,7 @@
     background: var(--bg);
     color: var(--text);
   }
-  #app {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    height: 100dvh;
-  }
+  #app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
   header {
     background: var(--primary);
     color: #fff;
@@ -42,228 +46,791 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     z-index: 10;
   }
+  header .title-wrap { min-width: 0; }
   header h1 {
-    font-size: 17px;
-    margin: 0;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 16px; margin: 0; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  #fileName {
+    font-size: 11.5px; opacity: 0.85; display: block; font-weight: 400;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .header-actions { display: flex; gap: 6px; flex-shrink: 0; }
   .icon-btn {
     background: rgba(255,255,255,0.15);
-    border: none;
-    color: #fff;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border: none; color: #fff;
+    width: 34px; height: 34px; border-radius: 50%;
+    font-size: 16px; display: flex; align-items: center; justify-content: center;
     cursor: pointer;
   }
   .icon-btn:active { background: rgba(255,255,255,0.3); }
 
-  main { flex: 1; position: relative; overflow: hidden; }
+  main { flex: 1; position: relative; overflow: hidden; background: var(--bg); }
 
   #emptyState {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 32px;
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 32px 20px; overflow-y: auto;
+  }
+  #emptyState .hero {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    margin-top: 8vh;
   }
   #emptyState .icon-circle {
-    width: 84px;
-    height: 84px;
-    border-radius: 50%;
-    background: #E3EEFC;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 20px;
-    font-size: 36px;
+    width: 76px; height: 76px; border-radius: 50%;
+    background: var(--surface); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 18px; font-size: 32px;
   }
   #emptyState p {
-    color: var(--muted);
-    font-size: 15px;
-    line-height: 1.5;
-    max-width: 320px;
-    margin: 0 0 24px;
+    color: var(--muted); font-size: 14.5px; line-height: 1.5;
+    max-width: 320px; margin: 0 0 22px;
   }
-  .primary-btn {
-    background: var(--primary);
-    color: #fff;
-    border: none;
-    padding: 13px 28px;
-    border-radius: 24px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 3px 8px rgba(21,101,192,0.3);
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .primary-btn, .secondary-btn {
+    border: none; padding: 13px 22px; border-radius: 24px;
+    font-size: 14.5px; font-weight: 600; cursor: pointer;
   }
+  .primary-btn { background: var(--primary); color: #fff; box-shadow: 0 3px 8px rgba(21,101,192,0.3); }
   .primary-btn:active { background: var(--primary-dark); }
+  .secondary-btn { background: var(--surface); color: var(--primary); border: 1.5px solid var(--primary); }
+  .secondary-btn:active { background: rgba(21,101,192,0.1); }
+
+  #recentsSection { width: 100%; max-width: 420px; margin-top: 32px; }
+  #recentsSection h2 {
+    font-size: 13px; color: var(--muted); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.03em; margin: 0 0 10px 4px;
+  }
+  .recent-item {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer;
+  }
+  .recent-item:active { background: rgba(21,101,192,0.06); }
+  .recent-item .r-icon { font-size: 20px; flex-shrink: 0; }
+  .recent-item .r-info { min-width: 0; flex: 1; }
+  .recent-item .r-name {
+    font-size: 14px; color: var(--text); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .recent-item .r-time { font-size: 11.5px; color: var(--muted); }
 
   #viewerFrame {
-    width: 100%;
-    height: 100%;
-    border: none;
-    background: #fff;
-    display: none;
+    width: 100%; height: 100%; border: none;
+    background: #fff; display: none; transform-origin: top left;
   }
-
-  #fileName {
-    font-size: 12px;
-    opacity: 0.85;
-    display: block;
-    font-weight: 400;
-  }
-
-  #fabOpen {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: var(--primary);
-    color: #fff;
-    border: none;
-    font-size: 24px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 5;
-  }
-  #fabOpen:active { background: var(--primary-dark); }
 
   #toast {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #333;
-    color: #fff;
-    padding: 10px 18px;
-    border-radius: 20px;
-    font-size: 13px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s ease;
-    z-index: 20;
-    max-width: 85%;
-    text-align: center;
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #333; color: #fff; padding: 10px 18px; border-radius: 20px;
+    font-size: 13px; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+    z-index: 50; max-width: 85%; text-align: center;
   }
   #toast.show { opacity: 1; }
 
   input[type="file"] { display: none; }
+
+  /* Bottom sheet (shared by entry picker and more-menu) */
+  .sheet-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    display: none; align-items: flex-end; z-index: 40;
+  }
+  .sheet-overlay.show { display: flex; }
+  .sheet {
+    background: var(--surface); width: 100%; max-height: 75vh;
+    border-radius: 16px 16px 0 0;
+    padding: 10px 16px calc(14px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+  .sheet-handle {
+    width: 36px; height: 4px; background: var(--border); border-radius: 4px;
+    margin: 4px auto 12px;
+  }
+  .sheet h2 { font-size: 14.5px; margin: 0 0 12px; color: var(--text); }
+  .entry-item {
+    padding: 12px 10px; border-radius: 10px; font-size: 14px; color: var(--text);
+    background: var(--bg); margin-bottom: 8px; cursor: pointer; word-break: break-all;
+  }
+  .entry-item:active { background: rgba(21,101,192,0.1); }
+
+  .menu-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 13px 8px; border-radius: 10px; cursor: pointer;
+    font-size: 14.5px; color: var(--text);
+  }
+  .menu-row:active { background: rgba(21,101,192,0.08); }
+  .menu-row .m-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+  .menu-row .m-label { flex: 1; }
+  .menu-row .m-value { font-size: 12.5px; color: var(--muted); }
+  .menu-row.disabled { opacity: 0.4; pointer-events: none; }
+  .menu-divider { height: 1px; background: var(--border); margin: 6px 0; }
+
+  .zoom-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 8px; gap: 10px;
+  }
+  .zoom-row .m-icon { font-size: 18px; width: 24px; text-align: center; }
+  .zoom-btn {
+    width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 17px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .zoom-btn:active { background: rgba(21,101,192,0.1); }
+  .zoom-level { font-size: 13.5px; color: var(--text); min-width: 42px; text-align: center; }
 </style>
 </head>
 <body>
 
 <div id="app">
   <header>
-    <div>
+    <div class="title-wrap">
       <h1 id="headerTitle">HTML Viewer</h1>
       <span id="fileName"></span>
     </div>
     <div class="header-actions">
-      <button class="icon-btn" id="btnReload" title="Reload" style="display:none;">&#8635;</button>
-      <button class="icon-btn" id="btnOpenTop" title="Open">&#128193;</button>
+      <button class="icon-btn" id="btnBack" title="Back" style="display:none;">&#8592;</button>
+      <button class="icon-btn" id="btnHome" title="Home" style="display:none;">&#8962;</button>
+      <button class="icon-btn" id="btnMore" title="More">&#8942;</button>
     </div>
   </header>
 
   <main>
     <div id="emptyState">
-      <div class="icon-circle">&#128196;</div>
-      <p>உங்க போன்ல இருக்குற ஒரு HTML file-ஐ தேர்ந்தெடுத்து இங்க பார்க்கலாம்.</p>
-      <button class="primary-btn" id="btnOpenMain">HTML File தேர்ந்தெடு</button>
+      <div class="hero">
+        <div class="icon-circle">&#128193;</div>
+        <p>ஒரு HTML file அல்லது முழு folder-ஐயும் (css, js, images சேர்த்து) தேர்ந்தெடுத்து இங்க பார்க்கலாம்.</p>
+        <div class="btn-row">
+          <button class="primary-btn" id="btnOpenMain">HTML File தேர்ந்தெடு</button>
+          <button class="secondary-btn" id="btnOpenFolderMain">Folder தேர்ந்தெடு</button>
+        </div>
+      </div>
+
+      <div id="recentsSection" style="display:none;">
+        <h2>சமீபத்தியவை</h2>
+        <div id="recentsList"></div>
+      </div>
     </div>
 
     <iframe id="viewerFrame" title="HTML content" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
-
-    <button id="fabOpen" title="Open another file">+</button>
   </main>
 </div>
 
 <input type="file" id="fileInput" accept=".html,.htm,text/html">
+<input type="file" id="folderInput" webkitdirectory multiple>
+
+<!-- Entry file picker (multiple HTML files in a folder) -->
+<div class="sheet-overlay" id="entryPickerOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>எந்த page-ஐ முதலில் திறக்கணும்?</h2>
+    <div id="entryPickerList"></div>
+  </div>
+</div>
+
+<!-- More options sheet -->
+<div class="sheet-overlay" id="moreOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="menu-row" id="mOpenFile"><span class="m-icon">&#128196;</span><span class="m-label">HTML File திற</span></div>
+    <div class="menu-row" id="mOpenFolder"><span class="m-icon">&#128193;</span><span class="m-label">Folder திற</span></div>
+    <div class="menu-row" id="mReload"><span class="m-icon">&#8635;</span><span class="m-label">Reload</span></div>
+    <div class="menu-divider"></div>
+    <div class="menu-row" id="mDarkMode"><span class="m-icon">&#127769;</span><span class="m-label">இரவு பயன்முறை</span><span class="m-value" id="mDarkModeValue">ஆஃப்</span></div>
+    <div class="zoom-row">
+      <span class="m-icon">&#128269;</span>
+      <span class="m-label" style="flex:1;">Zoom</span>
+      <button class="zoom-btn" id="zoomOut">&#8722;</button>
+      <span class="zoom-level" id="zoomLevel">100%</span>
+      <button class="zoom-btn" id="zoomIn">&#43;</button>
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-row" id="mPrint"><span class="m-icon">&#128424;</span><span class="m-label">Print / Save as PDF</span></div>
+    <div class="menu-row" id="mExport"><span class="m-icon">&#128190;</span><span class="m-label">Single File ஆக Save பண்</span></div>
+  </div>
+</div>
 
 <div id="toast"></div>
 
 <script>
   const fileInput = document.getElementById('fileInput');
+  const folderInput = document.getElementById('folderInput');
   const viewerFrame = document.getElementById('viewerFrame');
   const emptyState = document.getElementById('emptyState');
-  const fabOpen = document.getElementById('fabOpen');
-  const btnReload = document.getElementById('btnReload');
+  const recentsSection = document.getElementById('recentsSection');
+  const recentsList = document.getElementById('recentsList');
   const fileNameEl = document.getElementById('fileName');
   const toast = document.getElementById('toast');
+  const btnBack = document.getElementById('btnBack');
+  const btnHome = document.getElementById('btnHome');
+  const btnMore = document.getElementById('btnMore');
+  const entryPickerOverlay = document.getElementById('entryPickerOverlay');
+  const entryPickerList = document.getElementById('entryPickerList');
+  const moreOverlay = document.getElementById('moreOverlay');
 
-  let lastFile = null;
+  const hasFSA = 'showOpenFilePicker' in window && 'showDirectoryPicker' in window;
 
-  function openPicker() {
-    fileInput.value = '';
-    fileInput.click();
-  }
-
-  document.getElementById('btnOpenMain').addEventListener('click', openPicker);
-  document.getElementById('btnOpenTop').addEventListener('click', openPicker);
-  fabOpen.addEventListener('click', openPicker);
-
-  btnReload.addEventListener('click', () => {
-    if (lastFile) renderFile(lastFile);
-  });
-
-  fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    lastFile = file;
-    renderFile(file);
-  });
-
-  function renderFile(file) {
-    const reader = new FileReader();
-    reader.onload = function (evt) {
-      try {
-        viewerFrame.srcdoc = evt.target.result;
-        viewerFrame.style.display = 'block';
-        emptyState.style.display = 'none';
-        fabOpen.style.display = 'flex';
-        btnReload.style.display = 'flex';
-        fileNameEl.textContent = file.name;
-      } catch (err) {
-        showToast('இந்த file-ஐ HTML ஆக திறக்க முடியல');
-      }
-    };
-    reader.onerror = function () {
-      showToast('File படிக்க முடியல');
-    };
-    reader.readAsText(file);
-  }
-
+  // ---------- Helpers ----------
   function showToast(msg) {
     toast.textContent = msg;
     toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2200);
+    setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+  function openSheet(el) { el.classList.add('show'); }
+  function closeSheet(el) { el.classList.remove('show'); }
+  [entryPickerOverlay, moreOverlay].forEach(ov => {
+    ov.addEventListener('click', (e) => { if (e.target === ov) closeSheet(ov); });
+  });
+
+  function showViewer(name) {
+    viewerFrame.style.display = 'block';
+    emptyState.style.display = 'none';
+    fileNameEl.textContent = name || '';
+    btnHome.style.display = 'flex';
+    applyZoom();
+  }
+  function goHome() {
+    viewerFrame.style.display = 'none';
+    viewerFrame.removeAttribute('src');
+    viewerFrame.removeAttribute('srcdoc');
+    emptyState.style.display = 'flex';
+    fileNameEl.textContent = '';
+    btnHome.style.display = 'none';
+    btnBack.style.display = 'none';
+    loadRecents();
+  }
+  btnHome.addEventListener('click', goHome);
+  btnMore.addEventListener('click', () => openSheet(moreOverlay));
+
+  const MIME_TYPES = {
+    html: 'text/html', htm: 'text/html', css: 'text/css',
+    js: 'text/javascript', mjs: 'text/javascript', json: 'application/json',
+    png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
+    svg: 'image/svg+xml', webp: 'image/webp', ico: 'image/x-icon',
+    woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf', otf: 'font/otf',
+    mp4: 'video/mp4', webm: 'video/webm', mp3: 'audio/mpeg', wav: 'audio/wav',
+    txt: 'text/plain', xml: 'application/xml'
+  };
+  function mimeFor(name, fallback) {
+    const ext = name.split('.').pop().toLowerCase();
+    return MIME_TYPES[ext] || fallback || 'application/octet-stream';
+  }
+  function downloadTextAsFile(text, filename, mime) {
+    const blob = new Blob([text], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
   }
 
-  // Register service worker for offline / installable behavior (PWA)
+  // ================= Night mode =================
+  let nightMode = localStorage.getItem('hv-night') === '1';
+  function applyNightMode() {
+    document.documentElement.classList.toggle('dark', nightMode);
+    viewerFrame.style.filter = nightMode ? 'invert(1) hue-rotate(180deg)' : 'none';
+    document.getElementById('mDarkModeValue').textContent = nightMode ? 'ஆன்' : 'ஆஃப்';
+  }
+  document.getElementById('mDarkMode').addEventListener('click', () => {
+    nightMode = !nightMode;
+    localStorage.setItem('hv-night', nightMode ? '1' : '0');
+    applyNightMode();
+  });
+  applyNightMode();
+
+  // ================= Zoom =================
+  let zoomPct = parseInt(localStorage.getItem('hv-zoom') || '100', 10);
+  function applyZoom() {
+    viewerFrame.style.zoom = zoomPct + '%';
+    document.getElementById('zoomLevel').textContent = zoomPct + '%';
+  }
+  document.getElementById('zoomIn').addEventListener('click', () => {
+    zoomPct = Math.min(200, zoomPct + 10);
+    localStorage.setItem('hv-zoom', zoomPct); applyZoom();
+  });
+  document.getElementById('zoomOut').addEventListener('click', () => {
+    zoomPct = Math.max(50, zoomPct - 10);
+    localStorage.setItem('hv-zoom', zoomPct); applyZoom();
+  });
+
+  // ================= Print =================
+  document.getElementById('mPrint').addEventListener('click', () => {
+    closeSheet(moreOverlay);
+    try {
+      viewerFrame.contentWindow.focus();
+      viewerFrame.contentWindow.print();
+    } catch (e) {
+      showToast('Print பண்ண முடியல');
+    }
+  });
+
+  document.getElementById('mReload').addEventListener('click', () => {
+    closeSheet(moreOverlay);
+    reloadCurrent();
+  });
+  document.getElementById('mOpenFile').addEventListener('click', () => { closeSheet(moreOverlay); openFilePicker(); });
+  document.getElementById('mOpenFolder').addEventListener('click', () => { closeSheet(moreOverlay); openFolderPicker(); });
+  document.getElementById('mExport').addEventListener('click', () => { closeSheet(moreOverlay); exportCurrentAsSingleFile(); });
+
+  // ================= IndexedDB: recent files =================
+  function idbOpen() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('htmlViewerDB', 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains('recents')) {
+          req.result.createObjectStore('recents', { keyPath: 'id', autoIncrement: true });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbGetAllRecents() {
+    try {
+      const db = await idbOpen();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction('recents', 'readonly');
+        const req = tx.objectStore('recents').getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) { return []; }
+  }
+  async function addRecent({ type, name, handle }) {
+    try {
+      const db = await idbOpen();
+      const existing = await idbGetAllRecents();
+      const tx = db.transaction('recents', 'readwrite');
+      const store = tx.objectStore('recents');
+      for (const item of existing) {
+        if (item.name === name && item.type === type) store.delete(item.id);
+      }
+      store.add({ type, name, handle: handle || null, ts: Date.now() });
+      await new Promise((res) => { tx.oncomplete = res; tx.onerror = res; });
+      const all = (await idbGetAllRecents()).sort((a, b) => b.ts - a.ts);
+      if (all.length > 8) {
+        const db2 = await idbOpen();
+        const tx2 = db2.transaction('recents', 'readwrite');
+        const store2 = tx2.objectStore('recents');
+        all.slice(8).forEach((item) => store2.delete(item.id));
+      }
+    } catch (e) { /* non-critical */ }
+  }
+  function timeAgo(ts) {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return 'இப்போதுதான்';
+    const m = Math.floor(s / 60);
+    if (m < 60) return m + ' நிமிடம் முன்பு';
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + ' மணி நேரம் முன்பு';
+    const d = Math.floor(h / 24);
+    return d + ' நாட்கள் முன்பு';
+  }
+  async function loadRecents() {
+    const all = (await idbGetAllRecents()).sort((a, b) => b.ts - a.ts);
+    recentsList.innerHTML = '';
+    if (!all.length) { recentsSection.style.display = 'none'; return; }
+    recentsSection.style.display = 'block';
+    all.forEach((item) => {
+      const div = document.createElement('div');
+      div.className = 'recent-item';
+      div.innerHTML =
+        '<span class="r-icon">' + (item.type === 'folder' ? '&#128193;' : '&#128196;') + '</span>' +
+        '<div class="r-info"><div class="r-name"></div><div class="r-time"></div></div>';
+      div.querySelector('.r-name').textContent = item.name;
+      div.querySelector('.r-time').textContent = timeAgo(item.ts);
+      div.addEventListener('click', () => openRecent(item));
+      recentsList.appendChild(div);
+    });
+  }
+  async function openRecent(item) {
+    if (item.handle && hasFSA) {
+      try {
+        const perm = await item.handle.queryPermission({ mode: 'read' });
+        const granted = perm === 'granted' || (await item.handle.requestPermission({ mode: 'read' })) === 'granted';
+        if (!granted) { showToast('Permission கிடைக்கல, மறுபடியும் தேர்ந்தெடுங்க'); return; }
+        if (item.type === 'file') {
+          const file = await item.handle.getFile();
+          loadSingleFile(file, item.handle);
+        } else {
+          await loadFolderFromDirHandle(item.handle);
+        }
+        return;
+      } catch (e) {
+        showToast('திறக்க முடியல, மறுபடியும் தேர்ந்தெடுங்க');
+        return;
+      }
+    }
+    showToast('மறுபடியும் தேர்ந்தெடுங்க');
+    if (item.type === 'folder') openFolderPicker(); else openFilePicker();
+  }
+
+  // ================= Single-file mode =================
+  let currentSingleFileText = null;
+  let currentSingleFileName = null;
+  let currentSingleFileHandle = null;
+
+  function loadSingleFile(file, handle) {
+    resetFolderSession();
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      currentSingleFileText = evt.target.result;
+      currentSingleFileName = file.name;
+      currentSingleFileHandle = handle || null;
+      viewerFrame.removeAttribute('src');
+      viewerFrame.srcdoc = currentSingleFileText;
+      showViewer(file.name);
+      btnBack.style.display = 'none';
+      addRecent({ type: 'file', name: file.name, handle: handle || null });
+    };
+    reader.onerror = () => showToast('File படிக்க முடியல');
+    reader.readAsText(file);
+  }
+
+  async function openFilePicker() {
+    if (hasFSA) {
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          types: [{ description: 'HTML', accept: { 'text/html': ['.html', '.htm'] } }]
+        });
+        const file = await handle.getFile();
+        loadSingleFile(file, handle);
+      } catch (e) { /* user cancelled */ }
+      return;
+    }
+    fileInput.value = '';
+    fileInput.click();
+  }
+  document.getElementById('btnOpenMain').addEventListener('click', openFilePicker);
+
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) loadSingleFile(file, null);
+  });
+
+  // ================= Folder mode =================
+  let fileMap = new Map();
+  let assetUrlCache = new Map();
+  let navHistory = [];
+  let currentFolderEntryPath = null;
+  let currentFolderName = null;
+  const folderInputSupported = 'webkitdirectory' in document.createElement('input');
+
+  async function openFolderPicker() {
+    if (hasFSA) {
+      try {
+        const dirHandle = await window.showDirectoryPicker();
+        currentFolderName = dirHandle.name;
+        addRecent({ type: 'folder', name: dirHandle.name, handle: dirHandle });
+        await loadFolderFromDirHandle(dirHandle);
+      } catch (e) { /* user cancelled */ }
+      return;
+    }
+    if (!folderInputSupported) {
+      showToast('இந்த browser-ல folder select ஆதரிக்கல். Chrome பயன்படுத்துங்க.');
+      return;
+    }
+    folderInput.value = '';
+    folderInput.click();
+  }
+  document.getElementById('btnOpenFolderMain').addEventListener('click', openFolderPicker);
+
+  function resetFolderSession() {
+    for (const url of assetUrlCache.values()) URL.revokeObjectURL(url);
+    assetUrlCache = new Map();
+    fileMap = new Map();
+    navHistory = [];
+    currentFolderEntryPath = null;
+    currentFolderName = null;
+    btnBack.style.display = 'none';
+  }
+
+  async function buildFileMapFromDirHandle(dirHandle) {
+    const map = new Map();
+    async function walk(handle, prefix) {
+      for await (const [name, entry] of handle.entries()) {
+        const path = prefix ? prefix + '/' + name : name;
+        if (entry.kind === 'file') {
+          map.set(path, await entry.getFile());
+        } else if (entry.kind === 'directory') {
+          await walk(entry, path);
+        }
+      }
+    }
+    await walk(dirHandle, '');
+    return map;
+  }
+
+  async function loadFolderFromDirHandle(dirHandle) {
+    resetFolderSession();
+    currentFolderName = dirHandle.name;
+    fileMap = await buildFileMapFromDirHandle(dirHandle);
+    proceedWithFileMap();
+  }
+
+  folderInput.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    resetFolderSession();
+    let topName = null;
+    for (const file of files) {
+      let relPath = file.webkitRelativePath || file.name;
+      const parts = relPath.split('/');
+      if (parts.length > 1) { topName = topName || parts[0]; parts.shift(); }
+      relPath = parts.join('/');
+      fileMap.set(relPath, file);
+    }
+    currentFolderName = topName || 'Folder';
+    addRecent({ type: 'folder', name: currentFolderName, handle: null });
+    proceedWithFileMap();
+  });
+
+  function proceedWithFileMap() {
+    const htmlPaths = Array.from(fileMap.keys()).filter(p => /\.html?$/i.test(p));
+    if (!htmlPaths.length) {
+      showToast('இந்த folder-ல HTML file எதுவும் இல்ல');
+      return;
+    }
+    const rootIndex = htmlPaths.find(p => /^index\.html?$/i.test(p));
+    if (rootIndex) {
+      renderEntry(rootIndex, { pushHistory: true, clearHistory: true });
+    } else if (htmlPaths.length === 1) {
+      renderEntry(htmlPaths[0], { pushHistory: true, clearHistory: true });
+    } else {
+      showEntryPicker(htmlPaths.sort());
+    }
+  }
+
+  function showEntryPicker(htmlPaths) {
+    entryPickerList.innerHTML = '';
+    htmlPaths.forEach((p) => {
+      const div = document.createElement('div');
+      div.className = 'entry-item';
+      div.textContent = p;
+      div.addEventListener('click', () => {
+        closeSheet(entryPickerOverlay);
+        renderEntry(p, { pushHistory: true, clearHistory: true });
+      });
+      entryPickerList.appendChild(div);
+    });
+    openSheet(entryPickerOverlay);
+  }
+
+  function normalizeParts(parts) {
+    const stack = [];
+    for (const p of parts) {
+      if (p === '' || p === '.') continue;
+      if (p === '..') stack.pop();
+      else stack.push(p);
+    }
+    return stack.join('/');
+  }
+  function resolveRelative(basePath, relPath) {
+    if (!relPath) return null;
+    relPath = relPath.trim();
+    if (/^([a-z]+:)?\/\//i.test(relPath) || /^(data|mailto|tel|javascript):/i.test(relPath) || relPath.startsWith('#')) {
+      return null;
+    }
+    const baseDir = basePath.includes('/') ? basePath.slice(0, basePath.lastIndexOf('/')) : '';
+    const parts = relPath.startsWith('/')
+      ? relPath.split('/')
+      : (baseDir ? baseDir.split('/') : []).concat(relPath.split('/'));
+    return normalizeParts(parts);
+  }
+
+  async function getAssetUrl(path) {
+    if (assetUrlCache.has(path)) return assetUrlCache.get(path);
+    const file = fileMap.get(path);
+    if (!file) return null;
+    if (/\.css$/i.test(path)) {
+      const text = await file.text();
+      const rewritten = await rewriteCssUrls(text, path);
+      const url = URL.createObjectURL(new Blob([rewritten], { type: 'text/css' }));
+      assetUrlCache.set(path, url);
+      return url;
+    }
+    const type = file.type && file.type.length ? file.type : mimeFor(file.name);
+    const blob = file.type === type ? file : file.slice(0, file.size, type);
+    const url = URL.createObjectURL(blob);
+    assetUrlCache.set(path, url);
+    return url;
+  }
+  async function rewriteCssUrls(cssText, cssPath) {
+    const urlRegex = /url\(\s*(['"]?)([^'")]+)\1\s*\)/g;
+    const matches = [...cssText.matchAll(urlRegex)];
+    let result = cssText;
+    for (const m of matches) {
+      const resolved = resolveRelative(cssPath, m[2]);
+      if (!resolved || !fileMap.has(resolved)) continue;
+      const assetUrl = await getAssetUrl(resolved);
+      if (assetUrl) result = result.split(m[0]).join(`url("${assetUrl}")`);
+    }
+    return result;
+  }
+
+  async function renderEntry(path, opts = {}) {
+    const file = fileMap.get(path);
+    if (!file) { showToast('File கிடைக்கல'); return; }
+    let text;
+    try { text = await file.text(); } catch (e) { showToast('File படிக்க முடியல'); return; }
+
+    const doc = new DOMParser().parseFromString(text, 'text/html');
+    const attrTargets = [
+      ['img', 'src'], ['script', 'src'], ['source', 'src'], ['video', 'src'],
+      ['audio', 'src'], ['embed', 'src'], ['iframe', 'src'], ['link', 'href'], ['image', 'href']
+    ];
+    for (const [tag, attr] of attrTargets) {
+      for (const el of doc.querySelectorAll(tag + '[' + attr + ']')) {
+        const resolved = resolveRelative(path, el.getAttribute(attr));
+        if (!resolved || !fileMap.has(resolved)) continue;
+        const url = await getAssetUrl(resolved);
+        if (url) el.setAttribute(attr, url);
+      }
+    }
+    for (const styleEl of doc.querySelectorAll('style')) {
+      styleEl.textContent = await rewriteCssUrls(styleEl.textContent, path);
+    }
+    for (const el of doc.querySelectorAll('[style]')) {
+      el.setAttribute('style', await rewriteCssUrls(el.getAttribute('style'), path));
+    }
+    for (const a of doc.querySelectorAll('a[href]')) {
+      const resolved = resolveRelative(path, a.getAttribute('href'));
+      if (resolved && fileMap.has(resolved) && /\.html?$/i.test(resolved)) {
+        a.setAttribute('data-internal-nav', resolved);
+        a.setAttribute('href', 'javascript:void(0)');
+      }
+    }
+    const navScript = doc.createElement('script');
+    navScript.textContent = `
+      document.addEventListener('click', function(e){
+        var a = e.target.closest('a[data-internal-nav]');
+        if (a) {
+          e.preventDefault();
+          window.parent.postMessage({ type: 'html-viewer-nav', path: a.getAttribute('data-internal-nav') }, '*');
+        }
+      });
+    `;
+    doc.body.appendChild(navScript);
+
+    const finalHtml = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+    const url = URL.createObjectURL(new Blob([finalHtml], { type: 'text/html' }));
+
+    viewerFrame.removeAttribute('srcdoc');
+    viewerFrame.src = url;
+    currentFolderEntryPath = path;
+    showViewer((currentFolderName ? currentFolderName + ' / ' : '') + path);
+
+    if (opts.clearHistory) navHistory = [path];
+    else if (opts.pushHistory) navHistory.push(path);
+    btnBack.style.display = navHistory.length > 1 ? 'flex' : 'none';
+  }
+
+  btnBack.addEventListener('click', () => {
+    if (navHistory.length > 1) {
+      navHistory.pop();
+      renderEntry(navHistory[navHistory.length - 1], {});
+    }
+  });
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'html-viewer-nav' && fileMap.has(e.data.path)) {
+      renderEntry(e.data.path, { pushHistory: true });
+    }
+  });
+
+  function reloadCurrent() {
+    if (currentFolderEntryPath) {
+      renderEntry(currentFolderEntryPath, {});
+    } else if (currentSingleFileHandle) {
+      currentSingleFileHandle.getFile().then((file) => loadSingleFile(file, currentSingleFileHandle));
+    } else if (currentSingleFileText !== null) {
+      viewerFrame.srcdoc = currentSingleFileText;
+    } else {
+      showToast('திறந்திருக்குற file இல்ல');
+    }
+  }
+
+  // ================= Export as single file =================
+  const dataUriCache = new Map();
+  async function getAssetDataUri(path) {
+    if (dataUriCache.has(path)) return dataUriCache.get(path);
+    const file = fileMap.get(path);
+    if (!file) return null;
+    if (/\.css$/i.test(path)) {
+      const text = await file.text();
+      const rewritten = await rewriteCssToDataUris(text, path);
+      const uri = 'data:text/css;base64,' + btoa(unescape(encodeURIComponent(rewritten)));
+      dataUriCache.set(path, uri);
+      return uri;
+    }
+    const uri = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+    dataUriCache.set(path, uri);
+    return uri;
+  }
+  async function rewriteCssToDataUris(cssText, cssPath) {
+    const urlRegex = /url\(\s*(['"]?)([^'")]+)\1\s*\)/g;
+    const matches = [...cssText.matchAll(urlRegex)];
+    let result = cssText;
+    for (const m of matches) {
+      const resolved = resolveRelative(cssPath, m[2]);
+      if (!resolved || !fileMap.has(resolved)) continue;
+      const uri = await getAssetDataUri(resolved);
+      if (uri) result = result.split(m[0]).join(`url("${uri}")`);
+    }
+    return result;
+  }
+
+  async function exportCurrentAsSingleFile() {
+    if (currentFolderEntryPath) {
+      const path = currentFolderEntryPath;
+      const file = fileMap.get(path);
+      const text = await file.text();
+      const doc = new DOMParser().parseFromString(text, 'text/html');
+      const attrTargets = [
+        ['img', 'src'], ['script', 'src'], ['source', 'src'], ['video', 'src'],
+        ['audio', 'src'], ['embed', 'src'], ['link', 'href'], ['image', 'href']
+      ];
+      for (const [tag, attr] of attrTargets) {
+        for (const el of doc.querySelectorAll(tag + '[' + attr + ']')) {
+          const resolved = resolveRelative(path, el.getAttribute(attr));
+          if (!resolved || !fileMap.has(resolved)) continue;
+          const uri = await getAssetDataUri(resolved);
+          if (uri) el.setAttribute(attr, uri);
+        }
+      }
+      for (const styleEl of doc.querySelectorAll('style')) {
+        styleEl.textContent = await rewriteCssToDataUris(styleEl.textContent, path);
+      }
+      for (const el of doc.querySelectorAll('[style]')) {
+        el.setAttribute('style', await rewriteCssToDataUris(el.getAttribute('style'), path));
+      }
+      const finalHtml = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+      const name = path.split('/').pop().replace(/\.html?$/i, '') + '-exported.html';
+      downloadTextAsFile(finalHtml, name, 'text/html');
+      showToast('Save ஆச்சு (இதுல இந்த ஒரு page-க்கான படங்கள்/css மட்டும் embed ஆகும்)');
+    } else if (currentSingleFileText !== null) {
+      downloadTextAsFile(currentSingleFileText, currentSingleFileName || 'page.html', 'text/html');
+      showToast('Save ஆச்சு');
+    } else {
+      showToast('திறந்திருக்குற file இல்ல');
+    }
+  }
+
+  // Register service worker
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     });
   }
+
+  loadRecents();
 </script>
 
 </body>
