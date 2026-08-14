@@ -202,6 +202,11 @@
   .menu-row.disabled { opacity: 0.4; pointer-events: none; }
   .menu-row.hidden-row { display: none; }
   .menu-divider { height: 1px; background: var(--border); margin: 6px 0; }
+  .menu-section-title {
+    font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.05em; padding: 14px 10px 6px;
+  }
+  .menu-section-title:first-of-type { padding-top: 2px; }
 
   .zoom-row {
     display: flex; align-items: center; justify-content: space-between;
@@ -374,15 +379,20 @@
 <div class="sheet-overlay" id="moreOverlay">
   <div class="sheet">
     <div class="sheet-handle"></div>
+
+    <div class="menu-section-title">&#128193; File</div>
     <div class="menu-row" id="mNewFile"><span class="m-icon">&#10133;</span><span class="m-label">New File</span></div>
     <div class="menu-row" id="mOpenFile"><span class="m-icon">&#128196;</span><span class="m-label">Open HTML File</span></div>
     <div class="menu-row" id="mOpenFolder"><span class="m-icon">&#128193;</span><span class="m-label">Open Folder</span></div>
-    <div class="menu-row" id="mReload"><span class="m-icon">&#8635;</span><span class="m-label">Reload</span></div>
-    <div class="menu-row" id="mAutoReload"><span class="m-icon">&#8635;&#8635;</span><span class="m-label">Auto-reload on Change</span><span class="m-value" id="mAutoReloadValue">Off</span></div>
+    <div class="menu-row" id="mRecentProjects"><span class="m-icon">&#128337;</span><span class="m-label">Recent Projects</span></div>
     <div class="menu-row hidden-row" id="mFiles"><span class="m-icon">&#128194;</span><span class="m-label">Project Files</span></div>
-    <div class="menu-row hidden-row" id="mExportZip"><span class="m-icon">&#128230;</span><span class="m-label">Export Folder as ZIP</span></div>
-    <div class="menu-divider"></div>
-    <div class="menu-row" id="mDarkMode"><span class="m-icon">&#127769;</span><span class="m-label">Night Mode</span><span class="m-value" id="mDarkModeValue">Off</span></div>
+
+    <div class="menu-section-title">&#128065;&#65039; View</div>
+    <div class="device-row">
+      <button class="device-btn active" id="devDesktop">&#128421; Desktop</button>
+      <button class="device-btn" id="devTablet">&#128241; Tablet</button>
+      <button class="device-btn" id="devMobile">&#128241; Mobile</button>
+    </div>
     <div class="zoom-row">
       <span class="m-icon">&#128269;</span>
       <span class="m-label" style="flex:1;">Zoom</span>
@@ -390,24 +400,27 @@
       <span class="zoom-level" id="zoomLevel" title="Tap to reset">100%</span>
       <button class="zoom-btn" id="zoomIn">&#43;</button>
     </div>
-    <div class="device-row">
-      <button class="device-btn active" id="devDesktop">&#128421; Desktop</button>
-      <button class="device-btn" id="devTablet">&#128241; Tablet</button>
-      <button class="device-btn" id="devMobile">&#128241; Mobile</button>
-    </div>
+    <div class="menu-row" id="mDarkMode"><span class="m-icon">&#127769;</span><span class="m-label">Night Mode</span><span class="m-value" id="mDarkModeValue">Off</span></div>
     <div class="menu-row" id="mFullscreen"><span class="m-icon">&#9974;</span><span class="m-label">Fullscreen</span><span class="m-value" id="mFullscreenValue">Off</span></div>
     <div class="menu-row" id="mLandscape"><span class="m-icon">&#8596;</span><span class="m-label">Landscape Lock</span><span class="m-value" id="mLandscapeValue">Off</span></div>
-    <div class="menu-divider"></div>
-    <div class="menu-row" id="mViewSource"><span class="m-icon">&lt;/&gt;</span><span class="m-label">View / Edit Source</span></div>
-    <div class="menu-row" id="mPrint"><span class="m-icon">&#128424;</span><span class="m-label">Print / Save as PDF</span></div>
-    <div class="menu-row" id="mExport"><span class="m-icon">&#128190;</span><span class="m-label">Save as Single File</span></div>
-    <div class="menu-row" id="mScreenshot"><span class="m-icon">&#128248;</span><span class="m-label">Screenshot</span></div>
-    <div class="menu-row" id="mCopyPath"><span class="m-icon">&#128279;</span><span class="m-label">Copy Page Path</span></div>
-    <div class="menu-row" id="mShare"><span class="m-icon">&#128228;</span><span class="m-label">Share</span></div>
-    <div class="menu-row" id="mQR"><span class="m-icon">&#128241;</span><span class="m-label">QR Code Share</span></div>
-    <div class="menu-row" id="mBookmark"><span class="m-icon">&#11088;</span><span class="m-label">Bookmark this Page</span><span class="m-value" id="mBookmarkValue">Off</span></div>
-    <div class="menu-divider"></div>
+
+    <div class="menu-section-title">&#9889; Live</div>
+    <div class="menu-row" id="mReload"><span class="m-icon">&#8635;</span><span class="m-label">Reload</span></div>
+    <div class="menu-row" id="mAutoReload"><span class="m-icon">&#8635;&#8635;</span><span class="m-label">Auto-reload on Change</span><span class="m-value" id="mAutoReloadValue">Off</span></div>
     <div class="menu-row" id="mConsole"><span class="m-icon">&#128187;</span><span class="m-label">Console</span><span class="m-value" id="mConsoleValue">Empty</span></div>
+
+    <div class="menu-section-title">&#128295; Tools</div>
+    <div class="menu-row" id="mViewSource"><span class="m-icon">&lt;/&gt;</span><span class="m-label">View / Edit Source</span></div>
+    <div class="menu-row" id="mScreenshot"><span class="m-icon">&#128248;</span><span class="m-label">Screenshot</span></div>
+    <div class="menu-row" id="mPrint"><span class="m-icon">&#128424;</span><span class="m-label">Print / Save as PDF</span></div>
+    <div class="menu-row" id="mQR"><span class="m-icon">&#128241;</span><span class="m-label">QR Code Share</span></div>
+    <div class="menu-row" id="mCopyPath"><span class="m-icon">&#128279;</span><span class="m-label">Copy Page Path</span></div>
+
+    <div class="menu-section-title">&#128228; Share</div>
+    <div class="menu-row" id="mShare"><span class="m-icon">&#128228;</span><span class="m-label">Share</span></div>
+    <div class="menu-row" id="mExport"><span class="m-icon">&#128190;</span><span class="m-label">Save as Single File</span></div>
+    <div class="menu-row hidden-row" id="mExportZip"><span class="m-icon">&#128230;</span><span class="m-label">Export Folder as ZIP</span></div>
+    <div class="menu-row" id="mBookmark"><span class="m-icon">&#11088;</span><span class="m-label">Bookmark this Page</span><span class="m-value" id="mBookmarkValue">Off</span></div>
   </div>
 </div>
 
@@ -944,6 +957,7 @@
   });
   document.getElementById('mOpenFile').addEventListener('click', () => { closeSheet(moreOverlay); openFilePicker(); });
   document.getElementById('mOpenFolder').addEventListener('click', () => { closeSheet(moreOverlay); openFolderPicker(); });
+  document.getElementById('mRecentProjects').addEventListener('click', () => { closeSheet(moreOverlay); goHome(); });
   document.getElementById('mExport').addEventListener('click', () => { closeSheet(moreOverlay); exportCurrentAsSingleFile(); });
 
   document.getElementById('mCopyPath').addEventListener('click', async () => {
