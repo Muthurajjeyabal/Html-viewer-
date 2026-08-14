@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ta">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -33,7 +33,7 @@
     margin: 0;
     padding: 0;
     height: 100%;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Tamil", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: var(--bg);
     color: var(--text);
   }
@@ -202,15 +202,15 @@
     <div id="emptyState">
       <div class="hero">
         <div class="icon-circle">&#128193;</div>
-        <p>ஒரு HTML file அல்லது முழு folder-ஐயும் (css, js, images சேர்த்து) தேர்ந்தெடுத்து இங்க பார்க்கலாம்.</p>
+        <p>Open an HTML file, or a full folder (with its css, js, and images), to view it here.</p>
         <div class="btn-row">
-          <button class="primary-btn" id="btnOpenMain">HTML File தேர்ந்தெடு</button>
-          <button class="secondary-btn" id="btnOpenFolderMain">Folder தேர்ந்தெடு</button>
+          <button class="primary-btn" id="btnOpenMain">Choose HTML File</button>
+          <button class="secondary-btn" id="btnOpenFolderMain">Choose Folder</button>
         </div>
       </div>
 
       <div id="recentsSection" style="display:none;">
-        <h2>சமீபத்தியவை</h2>
+        <h2>Recent</h2>
         <div id="recentsList"></div>
       </div>
     </div>
@@ -226,7 +226,7 @@
 <div class="sheet-overlay" id="entryPickerOverlay">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <h2>எந்த page-ஐ முதலில் திறக்கணும்?</h2>
+    <h2>Which page should open first?</h2>
     <div id="entryPickerList"></div>
   </div>
 </div>
@@ -235,11 +235,11 @@
 <div class="sheet-overlay" id="moreOverlay">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="menu-row" id="mOpenFile"><span class="m-icon">&#128196;</span><span class="m-label">HTML File திற</span></div>
-    <div class="menu-row" id="mOpenFolder"><span class="m-icon">&#128193;</span><span class="m-label">Folder திற</span></div>
+    <div class="menu-row" id="mOpenFile"><span class="m-icon">&#128196;</span><span class="m-label">Open HTML File</span></div>
+    <div class="menu-row" id="mOpenFolder"><span class="m-icon">&#128193;</span><span class="m-label">Open Folder</span></div>
     <div class="menu-row" id="mReload"><span class="m-icon">&#8635;</span><span class="m-label">Reload</span></div>
     <div class="menu-divider"></div>
-    <div class="menu-row" id="mDarkMode"><span class="m-icon">&#127769;</span><span class="m-label">இரவு பயன்முறை</span><span class="m-value" id="mDarkModeValue">ஆஃப்</span></div>
+    <div class="menu-row" id="mDarkMode"><span class="m-icon">&#127769;</span><span class="m-label">Night Mode</span><span class="m-value" id="mDarkModeValue">Off</span></div>
     <div class="zoom-row">
       <span class="m-icon">&#128269;</span>
       <span class="m-label" style="flex:1;">Zoom</span>
@@ -249,7 +249,7 @@
     </div>
     <div class="menu-divider"></div>
     <div class="menu-row" id="mPrint"><span class="m-icon">&#128424;</span><span class="m-label">Print / Save as PDF</span></div>
-    <div class="menu-row" id="mExport"><span class="m-icon">&#128190;</span><span class="m-label">Single File ஆக Save பண்</span></div>
+    <div class="menu-row" id="mExport"><span class="m-icon">&#128190;</span><span class="m-label">Save as Single File</span></div>
   </div>
 </div>
 
@@ -332,7 +332,7 @@
   function applyNightMode() {
     document.documentElement.classList.toggle('dark', nightMode);
     viewerFrame.style.filter = nightMode ? 'invert(1) hue-rotate(180deg)' : 'none';
-    document.getElementById('mDarkModeValue').textContent = nightMode ? 'ஆன்' : 'ஆஃப்';
+    document.getElementById('mDarkModeValue').textContent = nightMode ? 'On' : 'Off';
   }
   document.getElementById('mDarkMode').addEventListener('click', () => {
     nightMode = !nightMode;
@@ -363,7 +363,7 @@
       viewerFrame.contentWindow.focus();
       viewerFrame.contentWindow.print();
     } catch (e) {
-      showToast('Print பண்ண முடியல');
+      showToast('Could not print');
     }
   });
 
@@ -421,13 +421,13 @@
   }
   function timeAgo(ts) {
     const s = Math.floor((Date.now() - ts) / 1000);
-    if (s < 60) return 'இப்போதுதான்';
+    if (s < 60) return 'Just now';
     const m = Math.floor(s / 60);
-    if (m < 60) return m + ' நிமிடம் முன்பு';
+    if (m < 60) return m + ' min ago';
     const h = Math.floor(m / 60);
-    if (h < 24) return h + ' மணி நேரம் முன்பு';
+    if (h < 24) return h + ' hr ago';
     const d = Math.floor(h / 24);
-    return d + ' நாட்கள் முன்பு';
+    return d + ' days ago';
   }
   async function loadRecents() {
     const all = (await idbGetAllRecents()).sort((a, b) => b.ts - a.ts);
@@ -451,7 +451,7 @@
       try {
         const perm = await item.handle.queryPermission({ mode: 'read' });
         const granted = perm === 'granted' || (await item.handle.requestPermission({ mode: 'read' })) === 'granted';
-        if (!granted) { showToast('Permission கிடைக்கல, மறுபடியும் தேர்ந்தெடுங்க'); return; }
+        if (!granted) { showToast('Permission denied — please choose again'); return; }
         if (item.type === 'file') {
           const file = await item.handle.getFile();
           loadSingleFile(file, item.handle);
@@ -460,11 +460,11 @@
         }
         return;
       } catch (e) {
-        showToast('திறக்க முடியல, மறுபடியும் தேர்ந்தெடுங்க');
+        showToast('Could not open — please choose again');
         return;
       }
     }
-    showToast('மறுபடியும் தேர்ந்தெடுங்க');
+    showToast('Please choose the file again');
     if (item.type === 'folder') openFolderPicker(); else openFilePicker();
   }
 
@@ -486,7 +486,7 @@
       btnBack.style.display = 'none';
       addRecent({ type: 'file', name: file.name, handle: handle || null });
     };
-    reader.onerror = () => showToast('File படிக்க முடியல');
+    reader.onerror = () => showToast('Could not read the file');
     reader.readAsText(file);
   }
 
@@ -530,7 +530,7 @@
       return;
     }
     if (!folderInputSupported) {
-      showToast('இந்த browser-ல folder select ஆதரிக்கல். Chrome பயன்படுத்துங்க.');
+      showToast('Folder selection is not supported in this browser. Please use Chrome.');
       return;
     }
     folderInput.value = '';
@@ -591,7 +591,7 @@
   function proceedWithFileMap() {
     const htmlPaths = Array.from(fileMap.keys()).filter(p => /\.html?$/i.test(p));
     if (!htmlPaths.length) {
-      showToast('இந்த folder-ல HTML file எதுவும் இல்ல');
+      showToast('No HTML files found in this folder');
       return;
     }
     const rootIndex = htmlPaths.find(p => /^index\.html?$/i.test(p));
@@ -673,9 +673,9 @@
 
   async function renderEntry(path, opts = {}) {
     const file = fileMap.get(path);
-    if (!file) { showToast('File கிடைக்கல'); return; }
+    if (!file) { showToast('File not found'); return; }
     let text;
-    try { text = await file.text(); } catch (e) { showToast('File படிக்க முடியல'); return; }
+    try { text = await file.text(); } catch (e) { showToast('Could not read the file'); return; }
 
     const doc = new DOMParser().parseFromString(text, 'text/html');
     const attrTargets = [
@@ -748,7 +748,7 @@
     } else if (currentSingleFileText !== null) {
       viewerFrame.srcdoc = currentSingleFileText;
     } else {
-      showToast('திறந்திருக்குற file இல்ல');
+      showToast('No file is currently open');
     }
   }
 
@@ -814,12 +814,12 @@
       const finalHtml = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
       const name = path.split('/').pop().replace(/\.html?$/i, '') + '-exported.html';
       downloadTextAsFile(finalHtml, name, 'text/html');
-      showToast('Save ஆச்சு (இதுல இந்த ஒரு page-க்கான படங்கள்/css மட்டும் embed ஆகும்)');
+      showToast('Saved (images/css for this page are embedded)');
     } else if (currentSingleFileText !== null) {
       downloadTextAsFile(currentSingleFileText, currentSingleFileName || 'page.html', 'text/html');
-      showToast('Save ஆச்சு');
+      showToast('Saved');
     } else {
-      showToast('திறந்திருக்குற file இல்ல');
+      showToast('No file is currently open');
     }
   }
 
