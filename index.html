@@ -228,6 +228,17 @@
   }
   .device-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
+  .custom-size-row {
+    display: flex; align-items: center; gap: 10px; padding: 4px 8px 10px;
+  }
+  .custom-size-row label {
+    display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted);
+  }
+  .custom-size-row input {
+    width: 66px; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 13px;
+  }
+
   .full-overlay {
     position: fixed; inset: 0; background: var(--surface);
     display: none; flex-direction: column; z-index: 60;
@@ -291,6 +302,21 @@
   .console-msg { flex: 1; word-break: break-word; color: var(--text); }
   .console-time { flex-shrink: 0; font-size: 10.5px; color: var(--muted); }
   .console-empty { padding: 30px 16px; text-align: center; color: var(--muted); font-size: 13.5px; font-family: inherit; }
+
+  .console-stats {
+    display: flex; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border);
+    background: var(--bg); flex-shrink: 0;
+  }
+  .console-chip {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px;
+    padding: 8px 6px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); font-size: 11.5px; font-weight: 600;
+    cursor: pointer;
+  }
+  .console-chip span { font-size: 12.5px; font-weight: 700; }
+  .console-chip.active.level-error { background: #D32F2F; color: #fff; border-color: #D32F2F; }
+  .console-chip.active.level-warn { background: #F9A825; color: #1a1a1a; border-color: #F9A825; }
+  .console-chip.active.level-log { background: #607D8B; color: #fff; border-color: #607D8B; }
 
   .file-item {
     display: flex; align-items: center; gap: 8px; padding: 11px 12px;
@@ -392,6 +418,12 @@
       <button class="device-btn active" id="devDesktop">&#128421; Desktop</button>
       <button class="device-btn" id="devTablet">&#128241; Tablet</button>
       <button class="device-btn" id="devMobile">&#128241; Mobile</button>
+      <button class="device-btn" id="devCustom">&#128295; Custom</button>
+    </div>
+    <div class="custom-size-row" id="customSizeRow" style="display:none;">
+      <label>W <input type="number" id="customWidth" value="390" min="100" max="4000"></label>
+      <label>H <input type="number" id="customHeight" value="844" min="100" max="4000"></label>
+      <button class="zoom-btn" id="customSizeApply" title="Apply">&#10003;</button>
     </div>
     <div class="zoom-row">
       <span class="m-icon">&#128269;</span>
@@ -410,7 +442,9 @@
     <div class="menu-row" id="mConsole"><span class="m-icon">&#128187;</span><span class="m-label">Console</span><span class="m-value" id="mConsoleValue">Empty</span></div>
 
     <div class="menu-section-title">&#128295; Tools</div>
+    <div class="menu-row" id="mFind"><span class="m-icon">&#128269;</span><span class="m-label">Find in Page</span></div>
     <div class="menu-row" id="mViewSource"><span class="m-icon">&lt;/&gt;</span><span class="m-label">View / Edit Source</span></div>
+    <div class="menu-row" id="mOpenInBrowser"><span class="m-icon">&#128421;</span><span class="m-label">Open in Browser</span></div>
     <div class="menu-row" id="mScreenshot"><span class="m-icon">&#128248;</span><span class="m-label">Screenshot</span></div>
     <div class="menu-row" id="mPrint"><span class="m-icon">&#128424;</span><span class="m-label">Print / Save as PDF</span></div>
     <div class="menu-row" id="mQR"><span class="m-icon">&#128241;</span><span class="m-label">QR Code Share</span></div>
@@ -445,6 +479,11 @@
       <button class="text-btn" id="consoleClear">Clear</button>
       <button class="icon-btn" id="consoleClose">&times;</button>
     </div>
+  </div>
+  <div class="console-stats" id="consoleStats">
+    <button class="console-chip level-error" id="chipError">&#128308; Errors <span>0</span></button>
+    <button class="console-chip level-warn" id="chipWarn">&#128993; Warnings <span>0</span></button>
+    <button class="console-chip level-log" id="chipLog">&#128309; Logs <span>0</span></button>
   </div>
   <div class="console-list" id="consoleList"></div>
 </div>
@@ -767,6 +806,7 @@
   });
   document.getElementById('findClose').addEventListener('click', closeFind);
   btnFind.addEventListener('click', openFind);
+  document.getElementById('mFind').addEventListener('click', () => { closeSheet(moreOverlay); openFind(); });
 
   function buildConsoleScriptEl(doc) {
     const s = doc.createElement('script');
@@ -800,9 +840,16 @@
 
   let consoleLogs = [];
   let newErrorCount = 0;
+  let consoleFilter = null; // null = show all, else 'error' | 'warn' | 'log'
+  function levelGroup(level) {
+    if (level === 'error') return 'error';
+    if (level === 'warn') return 'warn';
+    return 'log'; // 'log' and 'info' both grouped under Logs
+  }
   function resetConsoleLogs() {
     consoleLogs = [];
     newErrorCount = 0;
+    consoleFilter = null;
     updateConsoleBadge();
     renderConsoleList();
   }
@@ -819,12 +866,24 @@
     else el.textContent = consoleLogs.length ? 'OK' : 'Empty';
   }
   function renderConsoleList() {
+    const counts = { error: 0, warn: 0, log: 0 };
+    consoleLogs.forEach((entry) => { counts[levelGroup(entry.level)]++; });
+    document.querySelector('#chipError span').textContent = counts.error;
+    document.querySelector('#chipWarn span').textContent = counts.warn;
+    document.querySelector('#chipLog span').textContent = counts.log;
+    ['chipError', 'chipWarn', 'chipLog'].forEach((id) => document.getElementById(id).classList.remove('active'));
+    if (consoleFilter) {
+      const chipId = consoleFilter === 'error' ? 'chipError' : consoleFilter === 'warn' ? 'chipWarn' : 'chipLog';
+      document.getElementById(chipId).classList.add('active');
+    }
+
+    const visible = consoleFilter ? consoleLogs.filter((e) => levelGroup(e.level) === consoleFilter) : consoleLogs;
     consoleList.innerHTML = '';
-    if (!consoleLogs.length) {
-      consoleList.innerHTML = '<div class="console-empty">No console output yet.</div>';
+    if (!visible.length) {
+      consoleList.innerHTML = '<div class="console-empty">' + (consoleLogs.length ? 'No entries match this filter.' : 'No console output yet.') + '</div>';
       return;
     }
-    consoleLogs.forEach((entry) => {
+    visible.forEach((entry) => {
       const div = document.createElement('div');
       div.className = 'console-entry level-' + entry.level;
       div.innerHTML = '<span class="console-badge"></span><span class="console-msg"></span><span class="console-time"></span>';
@@ -835,6 +894,13 @@
     });
     consoleList.scrollTop = consoleList.scrollHeight;
   }
+  function toggleConsoleFilter(group) {
+    consoleFilter = consoleFilter === group ? null : group;
+    renderConsoleList();
+  }
+  document.getElementById('chipError').addEventListener('click', () => toggleConsoleFilter('error'));
+  document.getElementById('chipWarn').addEventListener('click', () => toggleConsoleFilter('warn'));
+  document.getElementById('chipLog').addEventListener('click', () => toggleConsoleFilter('log'));
   document.getElementById('mConsole').addEventListener('click', () => {
     closeSheet(moreOverlay);
     newErrorCount = 0;
@@ -844,7 +910,7 @@
   });
   document.getElementById('consoleClose').addEventListener('click', () => closeFullOverlay(consoleOverlay));
   document.getElementById('consoleClear').addEventListener('click', () => {
-    consoleLogs = []; newErrorCount = 0; updateConsoleBadge(); renderConsoleList();
+    consoleLogs = []; newErrorCount = 0; consoleFilter = null; updateConsoleBadge(); renderConsoleList();
   });
 
   let nightMode = localStorage.getItem('hv-night') === '1';
@@ -878,28 +944,57 @@
     localStorage.setItem('hv-zoom', zoomPct); applyZoom();
   });
 
-  function resetDeviceMode() { setDeviceMode('desktop'); }
+  function resetDeviceMode() {
+    document.getElementById('customSizeRow').style.display = 'none';
+    setDeviceMode('desktop');
+  }
   function setDeviceMode(mode) {
     document.querySelectorAll('.device-btn').forEach((b) => b.classList.remove('active'));
     if (mode === 'desktop') {
       document.getElementById('devDesktop').classList.add('active');
       viewerFrame.style.width = '100%';
+      viewerFrame.style.height = '100%';
       viewerFrame.style.margin = '0';
     } else if (mode === 'tablet') {
       document.getElementById('devTablet').classList.add('active');
       viewerFrame.style.width = '768px';
+      viewerFrame.style.height = '100%';
       viewerFrame.style.maxWidth = '100%';
       viewerFrame.style.margin = '0 auto';
-    } else {
+    } else if (mode === 'mobile') {
       document.getElementById('devMobile').classList.add('active');
       viewerFrame.style.width = '390px';
+      viewerFrame.style.height = '100%';
       viewerFrame.style.maxWidth = '100%';
+      viewerFrame.style.margin = '0 auto';
+    } else if (mode === 'custom') {
+      document.getElementById('devCustom').classList.add('active');
+      const w = document.getElementById('customWidth').value || 390;
+      const h = document.getElementById('customHeight').value || 844;
+      viewerFrame.style.width = w + 'px';
+      viewerFrame.style.height = h + 'px';
+      viewerFrame.style.maxWidth = '100%';
+      viewerFrame.style.maxHeight = '100%';
       viewerFrame.style.margin = '0 auto';
     }
   }
-  document.getElementById('devDesktop').addEventListener('click', () => setDeviceMode('desktop'));
-  document.getElementById('devTablet').addEventListener('click', () => setDeviceMode('tablet'));
-  document.getElementById('devMobile').addEventListener('click', () => setDeviceMode('mobile'));
+  document.getElementById('devDesktop').addEventListener('click', () => {
+    document.getElementById('customSizeRow').style.display = 'none';
+    setDeviceMode('desktop');
+  });
+  document.getElementById('devTablet').addEventListener('click', () => {
+    document.getElementById('customSizeRow').style.display = 'none';
+    setDeviceMode('tablet');
+  });
+  document.getElementById('devMobile').addEventListener('click', () => {
+    document.getElementById('customSizeRow').style.display = 'none';
+    setDeviceMode('mobile');
+  });
+  document.getElementById('devCustom').addEventListener('click', () => {
+    document.getElementById('customSizeRow').style.display = 'flex';
+    setDeviceMode('custom');
+  });
+  document.getElementById('customSizeApply').addEventListener('click', () => setDeviceMode('custom'));
 
   function toggleFullscreen() {
     if (!document.fullscreenElement) {
@@ -949,6 +1044,20 @@
     } catch (e) {
       showToast('Could not print');
     }
+  });
+
+  document.getElementById('mOpenInBrowser').addEventListener('click', () => {
+    closeSheet(moreOverlay);
+    if (viewerFrame.style.display !== 'block') { showToast('No file is currently open'); return; }
+    let url = null;
+    const rawSrc = viewerFrame.getAttribute('src');
+    if (currentFolderEntryPath && rawSrc && rawSrc.startsWith('blob:')) {
+      url = rawSrc;
+    } else if (currentSingleFileText !== null) {
+      url = URL.createObjectURL(new Blob([currentSingleFileText], { type: 'text/html' }));
+    }
+    if (!url) { showToast('Could not open in browser'); return; }
+    window.open(url, '_blank');
   });
 
   document.getElementById('mReload').addEventListener('click', () => {
