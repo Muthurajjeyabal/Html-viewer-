@@ -11,6 +11,23 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closetag.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldcode.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/xml-fold.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js" defer></script>
 
 <style>
   :root {
@@ -219,18 +236,39 @@
     flex-shrink: 0;
   }
   .full-title { font-size: 15px; font-weight: 600; }
-  .full-actions { display: flex; align-items: center; gap: 4px; }
+  .full-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
   .text-btn {
     background: rgba(255,255,255,0.18); border: none; color: #fff;
     font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 16px; cursor: pointer;
   }
   .text-btn:active { background: rgba(255,255,255,0.32); }
 
+  .layout-toggle { display: flex; background: rgba(255,255,255,0.18); border-radius: 14px; padding: 2px; }
+  .layout-btn {
+    background: transparent; border: none; color: #fff; font-size: 11.5px; font-weight: 600;
+    padding: 6px 10px; border-radius: 12px; cursor: pointer;
+  }
+  .layout-btn.active { background: #fff; color: var(--primary); }
+
   #sourceTextarea {
     flex: 1; width: 100%; border: none; resize: none; outline: none;
     padding: 14px; font-family: "SFMono-Regular", Menlo, Consolas, monospace;
     font-size: 13px; line-height: 1.5; background: var(--bg); color: var(--text);
     white-space: pre; overflow: auto;
+  }
+  #sourceOverlay .CodeMirror, #editorBody .CodeMirror {
+    flex: 1; height: 100% !important;
+    font-family: "SFMono-Regular", Menlo, Consolas, monospace !important; font-size: 13px;
+  }
+  #editorBody.code-only .CodeMirror { border-bottom: none; }
+  #editorBody .CodeMirror { border-bottom: 2px solid var(--border); }
+  #editorBody.preview-only .CodeMirror { display: none; }
+  .preview-wrap { position: relative; flex: 1; display: flex; min-height: 0; }
+  #editorBody.code-only .preview-wrap { display: none; }
+  .live-badge {
+    position: absolute; top: 8px; right: 10px; z-index: 2;
+    background: rgba(0,0,0,0.55); color: #fff; font-size: 10px; font-weight: 600;
+    padding: 3px 9px; border-radius: 10px; pointer-events: none;
   }
 
   .console-list { flex: 1; overflow-y: auto; padding: 6px 12px; }
@@ -258,17 +296,8 @@
   .file-item .f-icon { font-size: 15px; flex-shrink: 0; }
   .file-item .f-name { flex: 1; word-break: break-all; }
 
-  .editor-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-  #editorTextarea {
-    flex: 1; width: 100%; border: none; resize: none; outline: none;
-    padding: 14px; font-family: "SFMono-Regular", Menlo, Consolas, monospace;
-    font-size: 13px; line-height: 1.5; background: var(--bg); color: var(--text);
-    white-space: pre; overflow: auto; border-bottom: 2px solid var(--border);
-  }
-  #editorPreview { flex: 1; width: 100%; border: none; background: #fff; }
-  .editor-body.code-only #editorPreview { display: none; }
-  .editor-body.code-only #editorTextarea { border-bottom: none; }
-  .editor-body.preview-only #editorTextarea { display: none; }
+  .editor-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+  #editorPreview { flex: 1; width: 100%; height: 100%; border: none; background: #fff; }
 
   .history-item { padding: 12px; }
   .history-time { font-weight: 600; font-size: 13.5px; color: var(--text); }
@@ -386,8 +415,8 @@
   <div class="full-header">
     <span class="full-title">View / Edit Source</span>
     <div class="full-actions">
-      <button class="text-btn" id="sourceSnippets">&#129513;</button>
-      <button class="text-btn" id="sourceHistory">&#128337;</button>
+      <button class="text-btn" id="sourceSnippets">&#129513; Snippets</button>
+      <button class="text-btn" id="sourceHistory">&#128337; History</button>
       <button class="text-btn" id="sourceApply">Apply</button>
       <button class="text-btn" id="sourceSave">Save</button>
       <button class="icon-btn" id="sourceClose">&times;</button>
@@ -411,16 +440,23 @@
   <div class="full-header">
     <span class="full-title">New File</span>
     <div class="full-actions">
-      <button class="text-btn" id="editorLayoutToggle">Split</button>
-      <button class="text-btn" id="editorSnippets">&#129513;</button>
-      <button class="text-btn" id="editorHistory">&#128337;</button>
+      <div class="layout-toggle" id="editorLayoutToggle">
+        <button class="layout-btn" data-mode="code-only">Code</button>
+        <button class="layout-btn active" data-mode="split">Split</button>
+        <button class="layout-btn" data-mode="preview-only">Preview</button>
+      </div>
+      <button class="text-btn" id="editorSnippets">&#129513; Snippets</button>
+      <button class="text-btn" id="editorHistory">&#128337; History</button>
       <button class="text-btn" id="editorSave">Save</button>
       <button class="icon-btn" id="editorClose">&times;</button>
     </div>
   </div>
   <div id="editorBody" class="editor-body split">
     <textarea id="editorTextarea" spellcheck="false"></textarea>
-    <iframe id="editorPreview" title="Live preview" sandbox="allow-scripts allow-same-origin"></iframe>
+    <div class="preview-wrap">
+      <span class="live-badge">&#9679; Live</span>
+      <iframe id="editorPreview" title="Live preview" sandbox="allow-scripts allow-same-origin"></iframe>
+    </div>
   </div>
 </div>
 
@@ -506,6 +542,53 @@
   const findCount = document.getElementById('findCount');
 
   const hasFSA = 'showOpenFilePicker' in window && 'showDirectoryPicker' in window;
+
+  // ================= Code editor (CodeMirror) setup =================
+  let sourceCM = null;
+  let editorCM = null;
+  let sourceDirty = false;
+  let editorDirty = false;
+
+  function cmOptions() {
+    return {
+      mode: 'htmlmixed',
+      lineNumbers: true,
+      lineWrapping: false,
+      indentUnit: 2,
+      tabSize: 2,
+      matchBrackets: true,
+      autoCloseBrackets: true,
+      autoCloseTags: true,
+      foldGutter: true,
+      gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter']
+    };
+  }
+  function ensureSourceCM() {
+    if (sourceCM) return sourceCM;
+    if (typeof CodeMirror === 'undefined') return null;
+    sourceCM = CodeMirror.fromTextArea(sourceTextarea, cmOptions());
+    sourceCM.on('change', () => markSourceDirty());
+    return sourceCM;
+  }
+  function ensureEditorCM() {
+    if (editorCM) return editorCM;
+    if (typeof CodeMirror === 'undefined') return null;
+    editorCM = CodeMirror.fromTextArea(editorTextarea, cmOptions());
+    editorCM.on('change', () => {
+      markEditorDirty();
+      clearTimeout(editorDebounceTimer);
+      editorDebounceTimer = setTimeout(updateEditorPreview, 300);
+    });
+    return editorCM;
+  }
+  function markSourceDirty() { sourceDirty = true; updateSaveButtonLabels(); }
+  function markSourceSaved() { sourceDirty = false; updateSaveButtonLabels(); }
+  function markEditorDirty() { editorDirty = true; updateSaveButtonLabels(); }
+  function markEditorSaved() { editorDirty = false; updateSaveButtonLabels(); }
+  function updateSaveButtonLabels() {
+    document.getElementById('sourceSave').textContent = sourceDirty ? 'Save \u2022' : 'Save';
+    document.getElementById('editorSave').textContent = editorDirty ? 'Save \u2022' : 'Save';
+  }
 
   function showToast(msg) {
     toast.textContent = msg;
@@ -936,13 +1019,17 @@
   document.getElementById('mViewSource').addEventListener('click', () => {
     closeSheet(moreOverlay);
     if (currentRawText === null) { showToast('No file is currently open'); return; }
-    sourceTextarea.value = currentRawText;
+    const cm = ensureSourceCM();
+    if (!cm) { showToast('Editor is still loading \u2014 try again in a moment'); return; }
+    cm.setValue(currentRawText);
+    markSourceSaved();
     openFullOverlay(sourceOverlay);
+    setTimeout(() => cm.refresh(), 50);
   });
   document.getElementById('sourceClose').addEventListener('click', () => closeFullOverlay(sourceOverlay));
 
   document.getElementById('sourceApply').addEventListener('click', async () => {
-    const edited = sourceTextarea.value;
+    const edited = ensureSourceCM().getValue();
     if (currentFolderEntryPath) {
       await renderEntry(currentFolderEntryPath, { overrideText: edited });
     } else if (currentSingleFileName !== null) {
@@ -961,7 +1048,7 @@
   });
 
   document.getElementById('sourceSave').addEventListener('click', async () => {
-    const edited = sourceTextarea.value;
+    const edited = ensureSourceCM().getValue();
     let handle = null;
     let filename = currentSingleFileName || 'page.html';
 
@@ -984,6 +1071,7 @@
         lastKnownModified = freshFile.lastModified;
         showToast('Saved to the original file');
         saveVersionSnapshot(currentFolderEntryPath || filename, edited);
+        markSourceSaved();
         return;
       } catch (e) {
         showToast('Could not save directly \u2014 downloading a copy instead');
@@ -991,6 +1079,7 @@
     }
     downloadTextAsFile(edited, filename, 'text/html');
     saveVersionSnapshot(currentFolderEntryPath || filename, edited);
+    markSourceSaved();
   });
 
   document.getElementById('mFiles').addEventListener('click', () => {
@@ -1345,10 +1434,9 @@
   }
   let historyTarget = null;
   let historyOnChange = null;
-  async function openVersionHistory(fileKey, targetTextarea, onChange) {
+  async function openVersionHistory(fileKey, cm) {
     if (!fileKey) { showToast('No file is currently open'); return; }
-    historyTarget = targetTextarea;
-    historyOnChange = onChange;
+    if (!cm) { showToast('Editor is still loading \u2014 try again in a moment'); return; }
     const all = await idbGetAllVersions();
     const versions = all.filter((v) => v.fileKey === fileKey).sort((a, b) => b.ts - a.ts);
     historyList.innerHTML = '';
@@ -1365,11 +1453,7 @@
         div.querySelector('.history-time').textContent = new Date(v.ts).toLocaleString();
         div.querySelector('.history-preview').textContent = preview || '(empty)';
         div.addEventListener('click', () => {
-          if (historyTarget) {
-            historyTarget.value = v.content;
-            if (historyOnChange) historyOnChange();
-            else historyTarget.dispatchEvent(new Event('input'));
-          }
+          cm.setValue(v.content);
           closeFullOverlay(historyOverlay);
           showToast('Version loaded — press Save to keep it');
         });
@@ -1381,7 +1465,7 @@
   document.getElementById('historyClose').addEventListener('click', () => closeFullOverlay(historyOverlay));
   document.getElementById('sourceHistory').addEventListener('click', () => {
     const fileKey = currentFolderEntryPath || currentSingleFileName;
-    openVersionHistory(fileKey, sourceTextarea, null);
+    openVersionHistory(fileKey, ensureSourceCM());
   });
 
   // ================= Snippets library =================
@@ -1401,11 +1485,10 @@
     { label: 'CSS reset', code: '* { margin:0; padding:0; box-sizing:border-box; }\n' },
     { label: 'Google Font link', code: '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto&display=swap">\n' }
   ];
-  let snippetTarget = null;
-  let snippetOnChange = null;
-  function openSnippets(targetTextarea, onChange) {
-    snippetTarget = targetTextarea;
-    snippetOnChange = onChange;
+  let snippetTargetCM = null;
+  function openSnippets(cm) {
+    if (!cm) { showToast('Editor is still loading \u2014 try again in a moment'); return; }
+    snippetTargetCM = cm;
     snippetsList.innerHTML = '';
     SNIPPETS.forEach((sn) => {
       const div = document.createElement('div');
@@ -1420,17 +1503,13 @@
     openSheet(snippetsOverlay);
   }
   function insertSnippet(code) {
-    if (!snippetTarget) return;
-    const ta = snippetTarget;
-    const start = ta.selectionStart, end = ta.selectionEnd;
-    ta.value = ta.value.slice(0, start) + code + ta.value.slice(end);
-    const newPos = start + code.length;
-    ta.focus();
-    ta.setSelectionRange(newPos, newPos);
-    if (snippetOnChange) snippetOnChange();
-    else ta.dispatchEvent(new Event('input'));
+    if (!snippetTargetCM) return;
+    snippetTargetCM.replaceSelection(code);
+    snippetTargetCM.focus();
   }
-  document.getElementById('sourceSnippets').addEventListener('click', () => openSnippets(sourceTextarea, null));
+  document.getElementById('sourceSnippets').addEventListener('click', () => openSnippets(ensureSourceCM()));
+
+
 
   // ================= New File editor (with live split preview) =================
   const BOILERPLATE_HTML = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<title>New Page</title>\n<style>\n  body { font-family: sans-serif; padding: 20px; }\n</style>\n</head>\n<body>\n  <h1>Hello!</h1>\n  <p>Start editing to see your changes.</p>\n</body>\n</html>\n';
@@ -1442,41 +1521,42 @@
   function setEditorLayout(mode) {
     editorLayoutMode = mode;
     editorBody.className = 'editor-body ' + mode;
-    const labels = { split: 'Split', 'code-only': 'Code', 'preview-only': 'Preview' };
-    document.getElementById('editorLayoutToggle').textContent = labels[mode];
+    document.querySelectorAll('#editorLayoutToggle .layout-btn').forEach((b) => {
+      b.classList.toggle('active', b.dataset.mode === mode);
+    });
+    if (editorCM) setTimeout(() => editorCM.refresh(), 50);
   }
-  document.getElementById('editorLayoutToggle').addEventListener('click', () => {
-    const order = ['split', 'code-only', 'preview-only'];
-    setEditorLayout(order[(order.indexOf(editorLayoutMode) + 1) % order.length]);
+  document.querySelectorAll('#editorLayoutToggle .layout-btn').forEach((btn) => {
+    btn.addEventListener('click', () => setEditorLayout(btn.dataset.mode));
   });
 
   function updateEditorPreview() {
-    const doc = new DOMParser().parseFromString(editorTextarea.value, 'text/html');
+    const doc = new DOMParser().parseFromString(editorCM.getValue(), 'text/html');
     editorPreview.srcdoc = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
   }
-  editorTextarea.addEventListener('input', () => {
-    clearTimeout(editorDebounceTimer);
-    editorDebounceTimer = setTimeout(updateEditorPreview, 300);
-  });
 
   function openNewFileEditor() {
+    const cm = ensureEditorCM();
+    if (!cm) { showToast('Editor is still loading \u2014 try again in a moment'); return; }
     newFileHandle = null;
     newFileName = null;
-    editorTextarea.value = BOILERPLATE_HTML;
+    cm.setValue(BOILERPLATE_HTML);
+    markEditorSaved();
     setEditorLayout('split');
     updateEditorPreview();
     openFullOverlay(editorOverlay);
+    setTimeout(() => cm.refresh(), 50);
   }
   document.getElementById('btnNewFileMain').addEventListener('click', openNewFileEditor);
   document.getElementById('mNewFile').addEventListener('click', () => { closeSheet(moreOverlay); openNewFileEditor(); });
   document.getElementById('editorClose').addEventListener('click', () => closeFullOverlay(editorOverlay));
-  document.getElementById('editorSnippets').addEventListener('click', () => openSnippets(editorTextarea, updateEditorPreview));
+  document.getElementById('editorSnippets').addEventListener('click', () => openSnippets(ensureEditorCM()));
   document.getElementById('editorHistory').addEventListener('click', () => {
-    openVersionHistory(newFileName || 'untitled.html', editorTextarea, updateEditorPreview);
+    openVersionHistory(newFileName || 'untitled.html', ensureEditorCM());
   });
 
   document.getElementById('editorSave').addEventListener('click', async () => {
-    const content = editorTextarea.value;
+    const content = ensureEditorCM().getValue();
     if (hasFSA && window.showSaveFilePicker) {
       try {
         const handle = newFileHandle || await window.showSaveFilePicker({
@@ -1490,6 +1570,7 @@
         await writable.close();
         showToast('Saved: ' + handle.name);
         saveVersionSnapshot(newFileName, content);
+        markEditorSaved();
         return;
       } catch (e) {
         if (e.name === 'AbortError') return;
@@ -1500,6 +1581,7 @@
     newFileName = name;
     downloadTextAsFile(content, name, 'text/html');
     saveVersionSnapshot(name, content);
+    markEditorSaved();
   });
 
   // ================= IndexedDB: recent files =================
@@ -2040,6 +2122,7 @@
   loadRecents();
   loadBookmarks();
   renderSamples();
+  updateSaveButtonLabels();
 </script>
 
 </body>
